@@ -17,10 +17,48 @@
 
 extract_features <- function(mod){
   # find optimised lambda
-  optimal.coef <- as.matrix(glmnet::coef(mod, s = "lambda.min"))
+  optimal.coef <- as.matrix(glmnet::coef.cv.glmnet(mod, s = "lambda.min"))
   optimal.coef <- as.data.frame(optimal.coef)
   colnames(optimal.coef) <- "coef"
   optimal.coef <- tibble::rownames_to_column(optimal.coef, var = "feature")
   optimal.coef <-  optimal.coef[optimal.coef$coef != 0,]
   return(optimal.coef)
+}
+
+#' Function par table
+#'
+#' Extract features of a classical fit model
+#' @param
+#' obj : survival coxph fit. \cr
+#' @return a coxph fit object
+#' @export
+#' @importFrom magrittr %>%
+#' @importFrom rlang !!
+#' @import prodlim
+#' @import survival
+#' @author Sahota Tarj - caret
+
+par.table <- function(fit){ ## needs glm object
+  d1 <- summary(fit)$coefficients
+  d1 <- as.data.frame(d1)
+  dc <- as.data.frame(matrix(confint(fit),ncol=2))
+  names(dc) <- c("lower","upper")
+  d1 <- cbind(data.frame(Parameter=row.names(d1)),d1,dc)
+  rownames(d1) <- NULL
+  d1$description <- NA
+
+  d1 <- d1 %>%
+    dplyr::rename(Estimate = coef,
+                  "se_Estimate" = "se(coef)",
+                  HR = "exp(coef)"
+    ) %>%
+    dplyr::mutate(se = exp(se_Estimate),
+                  lower = exp(lower),
+                  upper = exp(upper)) %>%
+    dplyr::select(Parameter, Estimate, HR, se_Estimate, se, dplyr::everything()) %>%
+    dplyr::select(-Estimate,-se_Estimate)
+
+  d1$description <-"Hazard ratio (relative SE)"
+
+  return(d1)
 }

@@ -19,7 +19,10 @@ Imports:
 		survival,
 		tdROC,
 		glmnet,
-		pec
+		pec,
+		rsample,
+		tidyposterior,
+		tidyr
 RoxygenNote: 6.0.1
 Suggests: knitr,
     rmarkdown
