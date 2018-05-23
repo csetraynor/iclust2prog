@@ -31,28 +31,13 @@ data("intclustdat")
 
 intclustdat <- intclustdat %>%
   rename(time = os_months,
-         status = os_deceased,
-         "Sep_1" = "1-Sep") %>%
+         status = os_deceased) %>%
   mutate(status = status == 1)
 
 
 mc_samp <- mc_cv(intclustdat, strata = "status", times = 100)
 
-mc_samp$mod_pooled <- pmap(list(mc_samp$splits),
-                            function(data){
-                              mod_fit(x = data,
-                                      form = pooled,
-                                      inits = pooled_inits,
-                                      iter = 0)
-                            })
-mc_samp$brier_pooled <- pmap(list(mc_samp$splits, mc_samp$mod_pooled),
-                              function(data, model){
-                                get_tdbrier(data = data,
-                                            mod = model,
-                                            inits = pooled_inits,
-                                            iters = 0
-                                            )
-                              })
+
 
 ```
 
