@@ -62,3 +62,16 @@ par.table <- function(fit){ ## needs glm object
 
   return(d1)
 }
+
+
+
+#' Map gene_entrez_id
+#'
+#' Mapping the genes
+#' @param Hugo_Symbol \cr
+#' @return gene_entrez_id
+#' @export mg
+
+mg <- function(x){
+  gene_names$Entrez_Gene_Id[match(x, gene_names$Hugo_Symbol)]
+}
