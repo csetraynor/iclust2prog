@@ -32,11 +32,12 @@ You will be able to download the dataset via the cBioPortal and this is made eas
 For example:
 
 ```
-install.package("cgdsr")
 library(cgdsr)
 mycgds = CGDS("http://www.cbioportal.org/public-portal/")
 
-the_study_list = getCancerStudies(mycgds)
+the_study_list = getCancerStudies(mycgds)[25,1]
+case_list = getCaseLists(mycgds, the_study_list)[2,1]
+clinical_data <-  getClinicalData(mycgds, case_list)
 ```
 
 Otherwise, the data which will be relevant for this study is also included in this package:
