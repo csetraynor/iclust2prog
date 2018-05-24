@@ -50,21 +50,28 @@ mc_samp$mod_iclust2 <- pmap(list(mc_samp$splits),
                               mod_fit(x = data,
                                       form = iclust2,
                                       inits = iclust2_inits,
-                                      iter = 14)
+                                      iter = 0)
                             })
 mc_samp$mod_pooled <- pmap(list(mc_samp$splits),
                             function(data){
                               mod_fit(x = data,
                                       form = pooled,
                                       inits = pooled_inits,
-                                      iter = 14)
+                                      iter = 0)
                             })
-mc_samp$mod_relaxed <- pmap(list(mc_samp$splits),
+mc_samp$mod_pooled_relaxed <- pmap(list(mc_samp$splits),
+                           function(data){
+                             mod_fit(x = data,
+                                     form = pooled,
+                                     inits = pooled_inits,
+                                     iter = 14)
+                           })
+mc_samp$mod_iclust2_relaxed <- pmap(list(mc_samp$splits),
                             function(data){
                               mod_fit(x = data,
                                           form = iclust2,
                                           inits = iclust2_inits,
-                                          iter = 20)
+                                          iter = 14)
                             })
 
 ############### Get Brier
@@ -74,7 +81,7 @@ mc_samp$brier_pooled <- pmap(list(mc_samp$splits, mc_samp$mod_pooled),
                                 get_tdbrier(data = data,
                                             mod = model,
                                             inits = pooled_inits,
-                                            iters = 14
+                                            iters = 0
                                             )
                               })
 mc_samp$brier_iclust2 <- pmap(list(mc_samp$splits, mc_samp$mod_iclust2),
@@ -84,26 +91,34 @@ mc_samp$brier_iclust2 <- pmap(list(mc_samp$splits, mc_samp$mod_iclust2),
                                             inits = iclust2_inits,
                                             iters = 0)
                               })
-mc_samp$brier_relaxed <- pmap(list(mc_samp$splits, mc_samp$mod_relaxed),
+mc_samp$brier_pooled_relaxed <- pmap(list(mc_samp$splits, mc_samp$mod_pooled_relaxed),
+                                      function(data, model){
+                                        get_tdbrier(data = data,
+                                                    mod = model,
+                                                    inits = pooled_inits,
+                                                    iters = 14
+                                        )
+                                      })
+
+mc_samp$brier_iclust2_relaxed <- pmap(list(mc_samp$splits, mc_samp$mod_iclust2_relaxed),
                              function(data, model){
                                get_tdbrier(data = data,
                                            mod = model,
                                            inits = iclust2_inits,
-                                           iters = 10
+                                           iters = 14
                                )
                              })
 
 ###integrate Brier
 mc_samp$ibrier_iclust2 <- map_dbl(mc_samp$brier_iclust2, integrate_tdbrier)
 mc_samp$ibrier_pooled <- map_dbl(mc_samp$brier_pooled, integrate_tdbrier)
-mc_samp$ibrier_relaxed <- map_dbl(mc_samp$brier_relaxed, integrate_tdbrier)
+mc_samp$ibrier_pooled_relaxed <- map_dbl(mc_samp$brier_pooled_relaxed, integrate_tdbrier)
+mc_samp$ibrier_iclust2_relaxed <- map_dbl(mc_samp$brier_iclust2_relaxed, integrate_tdbrier)
 
 
 
 int_brier <- mc_samp %>%
   select(-matches("^mod"), -starts_with("brier"),  -starts_with("cindex"), -starts_with("roc"), -starts_with("iroc"))
-
-
 
 int_brier %>%
   select(-splits) %>%
@@ -138,15 +153,15 @@ stargazer(ibrier_tab, type = "latex", summary = FALSE, digits.extra = 3,
 
 comparisons <- contrast_models(
   int_brier,
-  list_1 = rep("ibrier_pooled", 2),
-  list_2 = c("ibrier_iclust2", "ibrier_relaxed"),
+  list_1 = rep("ibrier_iclust2_relaxed", 3),
+  list_2 = c("ibrier_iclust2", "ibrier_pooled_relaxed", "ibrier_pooled"),
   seed = 4654
 )
 
-ggplot(comparisons, size = 0.05) +
+ggplot(comparisons, size = 0.01) +
   theme_bw()
 
-summary(comparisons, size = 0.05) %>%
+summary(comparisons, size = 0.01) %>%
   select(contrast, starts_with("pract"))
 
 
@@ -163,7 +178,7 @@ mc_samp$roc_pooled <- pmap(list(mc_samp$splits, mc_samp$mod_pooled),
                                            mod = model
                                )
                              })
-mc_samp$roc_relaxed <- pmap(list(mc_samp$splits, mc_samp$mod_relaxed),
+mc_samp$roc_iclust2_relaxed <- pmap(list(mc_samp$splits, mc_samp$mod_iclust2_relaxed),
                            function(data, model){
                              get_tdroc(data = data,
                                        mod = model
@@ -173,7 +188,7 @@ mc_samp$roc_relaxed <- pmap(list(mc_samp$splits, mc_samp$mod_relaxed),
 ###integrate ROC
 mc_samp$iroc_iclust2 <- map_dbl(mc_samp$roc_iclust2, integrate.tdroc)
 mc_samp$iroc_pooled <- map_dbl(mc_samp$roc_pooled, integrate.tdroc)
-mc_samp$iroc_relaxed <- map_dbl(mc_samp$roc_relaxed, integrate.tdroc)
+mc_samp$iroc_iclust2_relaxed <- map_dbl(mc_samp$roc_iclust2_relaxed, integrate.tdroc)
 
 
 library(dplyr)
@@ -202,7 +217,7 @@ as.data.frame(roc_tab) %>% mutate_all(my_round)
 comparisons <- contrast_models(
   int_roc,
   list_1 = rep("iroc_pooled", 2),
-  list_2 = c("iroc_iclust2", "iroc_relaxed"),
+  list_2 = c("iroc_iclust2", "iroc_iclust2_relaxed"),
   seed = 4654
 )
 
@@ -225,7 +240,7 @@ mc_samp$cindex_pooled <- pmap_dbl(list(mc_samp$splits, mc_samp$mod_pooled),
                                        mod = model
                              )
                            })
-mc_samp$cindex_relaxed <- pmap_dbl(list(mc_samp$splits, mc_samp$mod_relaxed),
+mc_samp$cindex_iclust2_relaxed <- pmap_dbl(list(mc_samp$splits, mc_samp$mod_iclust2_relaxed),
                                    function(data, model){
                                      get_cindex(data = data,
                                                 mod = model)
@@ -253,7 +268,7 @@ as.data.frame(ci_tab) %>% mutate_all(my_round)
 comparisons <- contrast_models(
   mc_cindex_est,
   list_1 = rep("cindex_pooled",2),
-  list_2 = c("cindex_iclust2", "cindex_relaxed"),
+  list_2 = c("cindex_iclust2", "cindex_iclust2_relaxed"),
   seed = 4654
 )
 
