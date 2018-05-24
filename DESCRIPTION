@@ -7,7 +7,11 @@ Maintainer: Carlos S Traynor <carlos.serra91@gmail.com>
 Description: A recent breakthrough in breast cancer has stratified the METABRIC cohort using integrative Cluster confirming that there are at least 10 subtypes of the disease which have different clinical outcome. Depending on the category patients may be spare unnecessary chemotherapy or other may benefit of targeted antibody HER-2 therapy ( intClust-3 and intClust-5, respectively ). Several ER-positive are stratified to intClust-2 which has a difficult prognosis. In this study, we revisit the dataset, downloaded via the cBioPortal platform, to describe a novel gene signature predictive of prognosis in intClust-2 patients, with the potential to develop new tailored therapies by mapping genes to pathological pathways.
 Depends: R (>= 3.4.2),
 		ggplot2,
-		survival
+		survival		
+		rsample,
+		tidyposterior,
+		tdROC,
+		pec
 License: Common Licence
 Encoding: UTF-8
 LazyData: true
@@ -20,9 +24,9 @@ Imports:
 		tdROC,
 		glmnet,
 		pec,
+		tidyr,		
 		rsample,
-		tidyposterior,
-		tidyr
+		tidyposterior
 RoxygenNote: 6.0.1
 Suggests: knitr,
     rmarkdown
