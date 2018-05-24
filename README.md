@@ -12,46 +12,47 @@ has complicated medical management and prognosis. In this study, we revisit the 
 cBioPortal platform  (Gao et al), to describe a novel gene signature predictive of prognosis in intClust-2 patients, with the
 potential to develop new tailored therapies by mapping genes to pathological pathways.
 
-
-## Getting Started
-
-This vignette serves as an approach to the modeling of survival data in medical statistics.
-```
-library(iclust2prog)
-library(dplyr)
-library(tidyr)
-library(tidyposterior)
-library(DOSE)
-theme_set(theme_bw())
-
-###Load data
-
-data("intclustdat")
-
-
-intclustdat <- intclustdat %>%
-  rename(time = os_months,
-         status = os_deceased) %>%
-  mutate(status = status == 1)
-
-
-mc_samp <- mc_cv(intclustdat, strata = "status", times = 100)
-
-
-
-```
-
 ### Prerequisites
 
 This package is build in R to install R follow R-CRAN.
 
 In addition, it's advisable to also install Stan, Installation and documentation can be found here: http://mc-stan.org/users/documentation/
 
-
 ### Installing
+The package has to be installed in your R library either via git clone . or using devtools for example:
 ```
 devtools::install_github("csetraynor/iclust2prog")
 ```
+
+## Getting Started
+
+The vignette explains how to perform MC-cross-validation in survival analysis , which is very appealing in Machine Learning (McLachlan, G., 2004) and has been proposed as an alternative to classical statistical analysis ( Benavoli et al, 2017)
+The dataset we are going to work with contains curated clinical outcomes and genomic (gene expression and CNA) features from the METABRIC trial.
+You will be able to download the dataset via the cBioPortal and this is made easy with the introduction of the cgdsr package.
+For example:
+
+```
+install.package("cgdsr")
+library(cgdsr)
+mycgds = CGDS("http://www.cbioportal.org/public-portal/")
+
+the_study_list = getCancerStudies(mycgds)
+```
+
+Otherwise, the data which will be relevant for this study is also included in this package:
+```
+library(iclust2prog)
+
+###Load data
+
+data("intclustdat")
+?intclustdat
+
+```
+The vignette iclust2_analysis serves as an approach to the modeling high-dimensional genomic data in survival analysis.
+
+
+
 
 ## Acknowledgment
 
@@ -87,5 +88,6 @@ Guangchuang Yu, Li-Gen Wang, Yanyan Han and Qing-Yu He. clusterProfiler: an R
   package for comparing biological themes among gene clusters. OMICS: A Journal
   of Integrative Biology 2012, 16(5):284-287
 
+McLachlan, G. Discriminant analysis and statistical pattern recognition. 544, (John Wiley & Sons, 2004).
 
 

@@ -1,16 +1,8 @@
-C1 <- qusage::read.gmt("C:/RFactory/predsurv/vignettes/Gene sets/c1.all.v6.1.entrez.gmt")
+C1 <- qusage::read.gmt("docs/Gene sets/c1.all.v6.1.entrez.gmt")
 
-C7 <- qusage::read.gmt("C:/RFactory/clusterProfiler/vignettes/Gene sets/c7.all.v6.1.entrez.gmt")
+C7 <- qusage::read.gmt("docs/Gene sets/c7.all.v6.1.entrez.gmt")
 
-gene_names <- readRDS("C:/RFactory/Rdata_brca/gene_names.RDS")
-
-match("GATA3", gene_names$Hugo_Symbol)
-
-gene_names$Entrez_Gene_Id[match("GATA3", gene_names$Hugo_Symbol)]
-
-mg <- function(x){
-  gene_names$Entrez_Gene_Id[match(x, gene_names$Hugo_Symbol)]
-}
+data("gene_names")
 
 
 intClust1 <- unique(c(C1$chr17q23, mg("GATA3")  , mg("RPS6KB1") , mg("PPM1D,"), mg("PTRH2"), mg("APPBP2") ) )
@@ -41,7 +33,7 @@ intClust8 <-intClust8[!is.na(intClust8)]
 intClust9 <- unique(c( C1$chr8q, mg("TP53") , mg("PPP2R2A")   ))
 intClust9 <- intClust9[!is.na(intClust9)]
 
-intClust10 <- unique(c( mg("TP53") , C1$chr5q, C1$chr8q, C1$chr12p, 
+intClust10 <- unique(c( mg("TP53") , C1$chr5q, C1$chr8q, C1$chr12p,
                         mg("AURKB"),  mg("BCL2"),mg("BUB1"),mg("CDCA3"),mg("CDCA4"),mg("CDC20"),mg("CDC45"),mg("CHEK1"),mg("FOXM1"),mg("HDAC2"), mg("IGF1R"),mg("KIF2C"),mg("KIFC1"),mg("MTHFD1L"),mg("RAD51AP1"),mg("TTK"), mg("UBE2C") ))
 intClust10 <- intClust10[!is.na(intClust10)]
 

@@ -2,15 +2,15 @@
 % Please edit documentation in R/tdroc.R
 \name{tdroc}
 \alias{tdroc}
-\alias{tdroc.model.list}
-\alias{tdroc.int.matrix}
+\alias{get_tdroc}
+\alias{integrate.tdroc}
 \title{Calculate tdROC}
 \usage{
 tdroc(data, mod, ...)
 
-\method{tdroc}{model.list}(data, mod, ...)
+get_tdroc(data, mod, ...)
 
-\method{tdroc}{int.matrix}(data, mod, ...)
+integrate.tdroc(mod, ...)
 }
 \arguments{
 \item{data}{For the default functions, a datframe containing survival
