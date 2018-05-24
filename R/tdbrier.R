@@ -24,13 +24,16 @@
 #' @seealso [iBrier]
 #' @keywords brier
 #' @examples
-#' data("surv_example")
-#'
-#' # Given a sample
 #' require(survival)
-#' mod <- coxph(Surv(time, status)~ age, data = surv_example)
+#' require(dplyr)
+#' data(lung)
+#' lung <- lung %>%
+#' mutate(status = (status == 2))
 #'
-#' tdbrier(surv_example, mod)
+#' mod <- coxph(Surv(time, status)~ age, data = lung)
+#'
+#' tdbrier <- get_tdbrier(lung, mod)
+#' integrate_tdbrier(tdroc)
 #'
 #' @export tdbrier
 #' @author Carlos S Traynor
@@ -48,13 +51,19 @@ tdbrier <- function(data, mod,...)
 #' @rdname tdbrier
 
 get_tdbrier <-
-  function(data, mod, ...) {
+  function(data, mod, inits = NA_character_, iters = 20, ...) {
     train_dat <- rsample::analysis(data)
 
     features <- names(mod$coefficients)
 
-    mod <- coxph(as.formula(paste0("Surv(time, status)~",paste0(features, collapse = "+"))), data =train_dat)
+    if(is.character(inits)){
+      inits = rep(0, length(features))
+    }
+
+    mod <- coxph(as.formula(paste0("Surv(time, status)~",paste0(features, collapse = "+"))), data =train_dat, init = inits, control = coxph.control(iter.max = iters) )
     pred_dat <- rsample::assessment(data)
+
+
 
     #Create grid of equidistant time points for testing
     timepoints <-  seq(0, max(train_dat$time),
@@ -74,7 +83,7 @@ get_tdbrier <-
 
 #' @rdname tdbrier
 #' @export
-"integrate.tdbrier" <-
+integrate_tdbrier <-
   function(x, ...) {
     stop <- max(x$time[!is.na(x$AppErr$matrix)])
     ibrier <- pec::crps(x, models = "matrix", times = stop)[1]

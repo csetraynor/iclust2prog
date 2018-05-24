@@ -51,6 +51,7 @@ data("intclustdat")
 ```
 The vignette iclust2_analysis serves as an approach to the modeling high-dimensional genomic data in survival analysis.
 
+![brier_diff](https://user-images.githubusercontent.com/33321804/40493198-162cfc8a-5f6a-11e8-97f6-81391a393ba7.png)
 
 
 

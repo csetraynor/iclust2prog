@@ -50,14 +50,14 @@ mc_samp$mod_iclust2 <- pmap(list(mc_samp$splits),
                               mod_fit(x = data,
                                       form = iclust2,
                                       inits = iclust2_inits,
-                                      iter = 0)
+                                      iter = 14)
                             })
 mc_samp$mod_pooled <- pmap(list(mc_samp$splits),
                             function(data){
                               mod_fit(x = data,
                                       form = pooled,
                                       inits = pooled_inits,
-                                      iter = 0)
+                                      iter = 14)
                             })
 mc_samp$mod_relaxed <- pmap(list(mc_samp$splits),
                             function(data){
@@ -74,7 +74,7 @@ mc_samp$brier_pooled <- pmap(list(mc_samp$splits, mc_samp$mod_pooled),
                                 get_tdbrier(data = data,
                                             mod = model,
                                             inits = pooled_inits,
-                                            iters = 0
+                                            iters = 14
                                             )
                               })
 mc_samp$brier_iclust2 <- pmap(list(mc_samp$splits, mc_samp$mod_iclust2),
@@ -89,14 +89,14 @@ mc_samp$brier_relaxed <- pmap(list(mc_samp$splits, mc_samp$mod_relaxed),
                                get_tdbrier(data = data,
                                            mod = model,
                                            inits = iclust2_inits,
-                                           iters = 20
+                                           iters = 10
                                )
                              })
 
 ###integrate Brier
-mc_samp$ibrier_iclust2 <- map_dbl(mc_samp$brier_iclust2, integrate.tdbrier)
-mc_samp$ibrier_pooled <- map_dbl(mc_samp$brier_pooled, integrate.tdbrier)
-mc_samp$ibrier_relaxed <- map_dbl(mc_samp$brier_relaxed, integrate.tdbrier)
+mc_samp$ibrier_iclust2 <- map_dbl(mc_samp$brier_iclust2, integrate_tdbrier)
+mc_samp$ibrier_pooled <- map_dbl(mc_samp$brier_pooled, integrate_tdbrier)
+mc_samp$ibrier_relaxed <- map_dbl(mc_samp$brier_relaxed, integrate_tdbrier)
 
 
 
