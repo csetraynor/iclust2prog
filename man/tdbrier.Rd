@@ -12,7 +12,7 @@
 \usage{
 tdbrier(data, mod, ...)
 
-get_tdbrier(data, mod, inits = NA_character_, iters = 20, ...)
+get_tdbrier(data, mod, form, ...)
 
 integrate_tdbrier(x, ...)
 

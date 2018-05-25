@@ -16,6 +16,14 @@
 #'   _Modeling Survival Data: Extending the Cox Model_.
 #'   Springer, New York. ISBN 0-387-98784-3.
 
-mod_fit <- function(x, form, inits, iter = 0, ...) {
-  suppressWarnings( coxph(form, data = x, init = inits, control = coxph.control(iter.max = iter), ...) )
+mod_fit <- function(x, form, iter = 0, inits = NA_character_,...) {
+  x <- rsample::assessment(x)
+
+  X <- x[,form$feature]
+
+  # if(is.character(inits)){
+  #   inits = rep(0, length(features))
+  # }
+
+  coxph(Surv(x$time, x$status)~ . , data = X, init = form$coef, control = coxph.control(iter.max = iter) )
 }

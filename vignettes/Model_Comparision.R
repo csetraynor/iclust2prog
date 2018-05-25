@@ -4,46 +4,45 @@ library(tidyr)
 library(tidyposterior)
 theme_set(theme_bw())
 
-erpos_glmnet <- readRDS("//mokey.ads.warwick.ac.uk/User41/u/u1795546/Documents/Abstract_WIN_Symposium/erpos_lasso.RDS")
-
-iclust2_glmnet <- readRDS("//mokey.ads.warwick.ac.uk/User41/u/u1795546/Documents/Abstract_WIN_Symposium/iclust2_lasso.RDS")
-
 ###Load data
 data("erpos_glmnet")
 data("iclust2_glmnet")
-
-devtools::use_data(erpos_glmnet, overwrite = T)
-devtools::use_data(iclust2_glmnet, overwrite = T)
+data("brca_glmnet")
 
 #Get plots from fit glmnet
 plot(erpos_glmnet)
 plot(iclust2_glmnet)
-
+plot(brca_glmnet)
 
 #Extract features
 erpos_features <- extract_features(erpos_glmnet)
 erpos_features$feature[match("1-Sep", erpos_features$feature)] <- "Sep_1"
 
 iclust2_features <- extract_features(iclust2_glmnet)
-iclust2_features$feature[match("`GCSAML-AS1_cna`1", iclust2_features$feature)] <- "GCSAML-AS1_cna1"
+iclust2_features$feature[match("`GCSAML-AS1_cna`1", iclust2_features$feature)] <- "GCSAML_AS1_cna1"
+
+brca_features <- extract_features(brca_glmnet)
+brca_features$feature[match("1-Sep", brca_features$feature)] <- "Sep_1"
+brca_features$feature[match("RABEPK_cna-1", brca_features$feature)] <- "RABEPK_cna1"
+brca_features$feature[match("ZBTB34_cna-1", brca_features$feature)] <- "ZBTB34_cna1"
+brca_features$feature[match("HSPA5_cna-1", brca_features$feature)] <- "HSPA5_cna1"
+
 
 ############ Survival analysis vignette
-brca <- readRDS("//mokey.ads.warwick.ac.uk/User41/u/u1795546/Documents/Abstract_WIN_Symposium/Rdata_brca/ERpos_data.RDS")
+brca <- readRDS("//mokey.ads.warwick.ac.uk/User41/u/u1795546/Documents/Abstract_WIN_Symposium/Rdata_brca/brca_data.RDS")
 intclustdat <- brca[brca$intclust == 2, ]
 
 colnames(intclustdat)[match("`GCSAML-AS1_cna`1", colnames(intclustdat))] <- "GCSAML-AS1_cna1"
 colnames(intclustdat)[match("1-Sep", colnames(intclustdat))] <- "Sep_1"
+colnames(intclustdat)[match("RABEPK_cna-1", colnames(intclustdat))] <- "RABEPK_cna1"
+colnames(intclustdat)[match("ZBTB34_cna-1", colnames(intclustdat))] <- "ZBTB34_cna1"
+colnames(intclustdat)[match("HSPA5_cna-1", colnames(intclustdat))] <- "HSPA5_cna1"
 
-intclustdat <-  intclustdat[, unique(c(iclust2_features$feature, erpos_features$feature, "os_months", "os_deceased"))]
+intclustdat <-  intclustdat[, unique(c(iclust2_features$feature, erpos_features$feature,  brca_features$feature, "os_months", "os_deceased"))]
 rm(brca)
 devtools::use_data(intclustdat, overwrite = T)
 
 data("intclustdat")
-
-intclustdat <- intclustdat %>%
-  rename(time = os_months,
-         status = os_deceased) %>%
-  mutate(status = status == 1)
 
 library(rsample)
 set.seed(9666)
@@ -55,68 +54,51 @@ summary(map_dbl(mc_samp$splits, cens_rate))
 
 
 ############### Create models
+colnames(intclustdat)
+intclustdat[,brca_features$feature[30:54]]
 
 mc_samp$mod_iclust2 <- pmap(list(mc_samp$splits),
                             function(data){
                               mod_fit(x = data,
-                                      form = iclust2_features,
-                                      iter = 0)
+                                      form = iclust2_features)
                             })
 mc_samp$mod_erpos <- pmap(list(mc_samp$splits),
-                            function(data){
-                              mod_fit(x = data,
-                                      form = erpos_features,
-                                      iter = 0)
-                            })
-mc_samp$mod_erpos_relaxed <- pmap(list(mc_samp$splits),
-                           function(data){
-                             mod_fit(x = data,
-                                     form = erpos_features,
-                                     iter = 1)
-                           })
-mc_samp$mod_iclust2_relaxed <- pmap(list(mc_samp$splits),
-                            function(data){
-                              mod_fit(x = data,
-                                      form = iclust2_features,
-                                          iter = 1)
-                            })
+                          function(data){
+                            mod_fit(x = data,
+                                    form = erpos_features)
+                          })
+mc_samp$mod_pooled <- pmap(list(mc_samp$splits),
+                          function(data){
+                            mod_fit(x = data,
+                                    form = brca_features)
+                          })
 
 ############### Get Brier
 
 mc_samp$brier_erpos <- pmap(list(mc_samp$splits, mc_samp$mod_erpos),
-                              function(data, model){
-                                get_tdbrier(data = data,
-                                            mod = model,
-                                            form = erpos_features
-                                            )
-                              })
+                            function(data, model){
+                              get_tdbrier(data = data,
+                                          mod = model,
+                                          form = erpos_features
+                              )
+                            })
 mc_samp$brier_iclust2 <- pmap(list(mc_samp$splits, mc_samp$mod_iclust2),
                               function(data, model){
                                 get_tdbrier(data = data,
                                             mod = model,
                                             form = iclust2_features)
                               })
-mc_samp$brier_erpos_relaxed <- pmap(list(mc_samp$splits, mc_samp$mod_erpos_relaxed),
-                                      function(data, model){
-                                        get_tdbrier(data = data,
-                                                    mod = model,
-                                                    form = erpos_features
-                                        )
-                                      })
-
-mc_samp$brier_iclust2_relaxed <- pmap(list(mc_samp$splits, mc_samp$mod_iclust2_relaxed),
-                             function(data, model){
-                               get_tdbrier(data = data,
-                                           mod = model,
-                                           form = iclust2_features
-                               )
-                             })
+mc_samp$brier_pooled <- pmap(list(mc_samp$splits, mc_samp$mod_pooled),
+                              function(data, model){
+                                get_tdbrier(data = data,
+                                            mod = model,
+                                            form = brca_features)
+                              })
 
 ###integrate Brier
 mc_samp$ibrier_iclust2 <- map_dbl(mc_samp$brier_iclust2, integrate_tdbrier)
 mc_samp$ibrier_erpos <- map_dbl(mc_samp$brier_erpos, integrate_tdbrier)
-mc_samp$ibrier_erpos_relaxed <- map_dbl(mc_samp$brier_erpos_relaxed, integrate_tdbrier)
-mc_samp$ibrier_iclust2_relaxed <- map_dbl(mc_samp$brier_iclust2_relaxed, integrate_tdbrier)
+mc_samp$ibrier_pooled <- map_dbl(mc_samp$brier_pooled, integrate_tdbrier)
 
 
 
@@ -147,8 +129,8 @@ stargazer(ibrier_tab, type = "latex", summary = FALSE, digits.extra = 3,
 
 comparisons <- contrast_models(
   int_brier,
-  list_1 = rep("ibrier_iclust2_relaxed", 3),
-  list_2 = c("ibrier_iclust2", "ibrier_erpos_relaxed", "ibrier_erpos"),
+  list_1 = rep("ibrier_iclust2", 2),
+  list_2 = c("ibrier_erpos", "ibrier_pooled"),
   seed = 4654
 )
 
@@ -162,28 +144,28 @@ summary(comparisons, size = 0.01) %>%
 ############### Get ROC
 
 mc_samp$roc_iclust2 <- pmap(list(mc_samp$splits, mc_samp$mod_iclust2),
-                              function(data, model){
-                                get_tdroc(data = data,
-                                            mod = model)
-                              })
+                            function(data, model){
+                              get_tdroc(data = data,
+                                        mod = model)
+                            })
 mc_samp$roc_erpos <- pmap(list(mc_samp$splits, mc_samp$mod_erpos),
-                             function(data, model){
-                               get_tdroc(data = data,
-                                           mod = model
-                               )
-                             })
+                          function(data, model){
+                            get_tdroc(data = data,
+                                      mod = model
+                            )
+                          })
 mc_samp$roc_iclust2_relaxed <- pmap(list(mc_samp$splits, mc_samp$mod_iclust2_relaxed),
-                           function(data, model){
-                             get_tdroc(data = data,
-                                       mod = model
-                             )
-                           })
+                                    function(data, model){
+                                      get_tdroc(data = data,
+                                                mod = model
+                                      )
+                                    })
 mc_samp$roc_erpos_relaxed <- pmap(list(mc_samp$splits, mc_samp$mod_erpos_relaxed),
-                           function(data, model){
-                             get_tdroc(data = data,
-                                       mod = model
-                             )
-                           })
+                                  function(data, model){
+                                    get_tdroc(data = data,
+                                              mod = model
+                                    )
+                                  })
 
 ###integrate ROC
 mc_samp$iroc_iclust2 <- map_dbl(mc_samp$roc_iclust2, integrate_tdroc)
@@ -228,27 +210,27 @@ summary(comparisons, size = 0.05) %>%
 
 ######Concordance Index
 mc_samp$cindex_iclust2 <- pmap_dbl(list(mc_samp$splits, mc_samp$mod_iclust2),
-                            function(data, model){
-                              get_cindex(data = data,
-                                        mod = model)
-                            })
-mc_samp$cindex_erpos <- pmap_dbl(list(mc_samp$splits, mc_samp$mod_erpos),
-                           function(data, model){
-                             get_cindex(data = data,
-                                       mod = model
-                             )
-                           })
-mc_samp$cindex_iclust2_relaxed <- pmap_dbl(list(mc_samp$splits, mc_samp$mod_iclust2_relaxed),
                                    function(data, model){
                                      get_cindex(data = data,
                                                 mod = model)
                                    })
+mc_samp$cindex_erpos <- pmap_dbl(list(mc_samp$splits, mc_samp$mod_erpos),
+                                 function(data, model){
+                                   get_cindex(data = data,
+                                              mod = model
+                                   )
+                                 })
+mc_samp$cindex_iclust2_relaxed <- pmap_dbl(list(mc_samp$splits, mc_samp$mod_iclust2_relaxed),
+                                           function(data, model){
+                                             get_cindex(data = data,
+                                                        mod = model)
+                                           })
 mc_samp$cindex_erpos_relaxed <- pmap_dbl(list(mc_samp$splits, mc_samp$mod_erpos_relaxed),
-                                  function(data, model){
-                                    get_cindex(data = data,
-                                               mod = model
-                                    )
-                                  })
+                                         function(data, model){
+                                           get_cindex(data = data,
+                                                      mod = model
+                                           )
+                                         })
 
 cindex_est <- mc_samp %>%
   select(-matches("^mod"), -starts_with("brier"),  -starts_with("ibrier"), -starts_with("roc"), -starts_with("iroc"))

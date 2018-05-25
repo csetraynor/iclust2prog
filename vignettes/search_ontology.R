@@ -1,7 +1,15 @@
 ##### Relaxed Cox
+library(iclust2prog)
 data("intclustdat")
+data("iclust2_glmnet")
 
-relaxed_enet_fit <- coxph(Surv(time, status) ~ npi+MTCP1NB+C9orf95+DB451841+MAP1B+CSAG1+NDUFA4L2+NGF+BOLA1+CAMKK1+AK055323+GPR4+age_std, data = enet_data)
+iclust2_features <- extract_features(iclust2_glmnet)
+iclust2_features$feature[match("`GCSAML-AS1_cna`1", iclust2_features$feature)] <- "GCSAML_AS1_cna1"
+colnames(intclustdat)[match("GCSAML-AS1_cna1", colnames(intclustdat))] <- "GCSAML_AS1_cna1"
+
+X <- intclustdat[,iclust2_features$feature]
+relaxed_enet_fit <-   coxph(Surv(intclustdat$time, intclustdat$status)~ . ,
+  data = X, init = iclust2_features$coef, control = coxph.control(iter.max = 1) )
 
 
 CoxTab <- par.table(relaxed_enet_fit)
@@ -13,10 +21,29 @@ if("age_std" %in% genedata$Hugo_Symbol){
 }else{
   geneTable <- genedata
 }
+geneTable$Hugo_Symbol <- as.character(geneTable$Hugo_Symbol)
 
 ############ Create Gene List
 data("gene_names")
-geneTable$Entrez_Gene_Id <- brcadata$Entrez_Gene_Id[match(geneTable$Hugo_Symbol, brcadata$Hugo_Symbol)]
+gene_names <- readr::read_tsv("C:/RFactory/bymetabric_files/metabricdata/brca_metabric/data_expression.txt")
+cna_names <- readr::read_tsv("C:/RFactory/bymetabric_files/metabricdata/brca_metabric/data_CNA.txt")
+cna_names <- data.frame(Hugo_Symbol = cna_names$Hugo_Symbol,
+                        Entrez_Gene_Id = cna_names$Entrez_Gene_Id)
+gene_names <- data.frame(Hugo_Symbol = gene_names$Hugo_Symbol,
+                        Entrez_Gene_Id = gene_names$Entrez_Gene_Id)
+
+target_names <- rbind(cna_names, gene_names)
+target_names <- unique(target_names)
+
+target_names$Hugo_Symbol[duplicated(target_names$Hugo_Symbol) == T]
+
+target_names$Entrez_Gene_Id <- gene_names$Entrez_Gene_Id[match(target_names$Hugo_Symbol, gene_names$Hugo_Symbol)]
+
+target_names$Entrez_Gene_Id <- cna_names$Entrez_Gene_Id[match(target_names$Hugo_Symbol, cna_names$Hugo_Symbol)]
+
+geneTable$Hugo_Symbol <- gsub("_cna*", "", geneTable$Hugo_Symbol)
+
+geneTable$Entrez_Gene_Id <- target_names$Entrez_Gene_Id[match(geneTable$Hugo_Symbol, target_names$Hugo_Symbol)]
 
 geneTable
 gene <-  geneTable$Entrez_Gene_Id
@@ -49,3 +76,16 @@ plotGOgraph(gsecc)
 cnetplot(gsecc, foldChange=geneList)
 enrichMap(gsecc, vertex.label.cex=1.2, layout=igraph::layout.kamada.kawai)
 dotplot(gsecc, showCategory=30)
+
+gsecc <- gseDO(geneList=sort(geneList, decreasing = TRUE),
+               minGSSize = 1,
+               maxGSSize = 9,
+               verbose=F)
+head(summary(gsecc))
+
+plotGOgraph(gsecc)
+cnetplot(gsecc, foldChange=geneList)
+enrichMap(gsecc, vertex.label.cex=1.2, layout=igraph::layout.kamada.kawai)
+dotplot(gsecc, showCategory=30)
+
+

@@ -4,7 +4,7 @@
 \alias{mod_fit}
 \title{Model fitting}
 \usage{
-mod_fit(x, form, inits, iter = 0, ...)
+mod_fit(x, form, iter = 0, inits = NA_character_, ...)
 }
 \arguments{
 \item{x}{data}

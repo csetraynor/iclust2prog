@@ -40,7 +40,7 @@ tdroc <- function(data, mod,...)
 #' @rdname tdroc
 get_tdroc <-
   function(data, mod, ...) {
-    pred_dat <- assessment(data)
+    pred_dat <- rsample::assessment(data)
     probs <- predict(mod, newdata = pred_dat, type = "lp")
 
     roc <- tdROC::tdROC(X = probs[!is.na(probs)],

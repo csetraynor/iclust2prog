@@ -51,22 +51,19 @@ tdbrier <- function(data, mod,...)
 #' @rdname tdbrier
 
 get_tdbrier <-
-  function(data, mod, inits = NA_character_, iters = 20, ...) {
-    train_dat <- rsample::analysis(data)
+  function(data, mod, form,  ...) {
+    x <- rsample::analysis(data)
+
+    X <- x[,form$feature]
 
     features <- names(mod$coefficients)
 
-    if(is.character(inits)){
-      inits = rep(0, length(features))
-    }
 
-    mod <- coxph(as.formula(paste0("Surv(time, status)~",paste0(features, collapse = "+"))), data =train_dat, init = inits, control = coxph.control(iter.max = iters) )
     pred_dat <- rsample::assessment(data)
 
 
-
     #Create grid of equidistant time points for testing
-    timepoints <-  seq(0, max(train_dat$time),
+    timepoints <-  seq(0, max(x$time),
                        length.out = 100L)
     probs <- pec::predictSurvProb(mod,
                                   newdata = pred_dat,

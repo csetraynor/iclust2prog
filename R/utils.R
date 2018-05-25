@@ -75,3 +75,17 @@ par.table <- function(fit){ ## needs glm object
 mg <- function(x){
   gene_names$Entrez_Gene_Id[match(x, gene_names$Hugo_Symbol)]
 }
+
+#' Round data frame
+#'
+#' Round data frame
+#' @param decimals \cr
+#' @return rounded
+#' @export my_round
+my_round <- function(x){
+  if(is.character(x)){
+    x
+  }else{
+    round(x,3)
+  }
+}
