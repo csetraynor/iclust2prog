@@ -52,7 +52,9 @@ data("intclustdat")
 ```
 The vignette Model_comparision serves as an approach to the modeling high-dimensional genomic data in survival analysis. We can for example learn which model has greater performance by comparing the integrated brier score. The figure belllow is the empirical distribution of 100-mc-cross-validation experiment for iclust2, erpos, and pooled analyses.
 
-[IBrier_pdf.pdf](https://github.com/csetraynor/iclust2prog/Plots/IBrier_pdf.pdf)
+<p>
+    <img src="https://github.com/csetraynor/iclust2prog/Plots/IBrier_pdf.pdf" width="220" height="240" />
+</p>
 
 In addition, we can perform a post-hoc analysis and by HMC sample draws from the posterior of the IBRIER distributions. The figure bellow shos the results:
 
