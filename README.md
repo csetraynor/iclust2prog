@@ -97,5 +97,3 @@ Guangchuang Yu, Li-Gen Wang, Yanyan Han and Qing-Yu He. clusterProfiler: an R
   of Integrative Biology 2012, 16(5):284-287
 
 McLachlan, G. Discriminant analysis and statistical pattern recognition. 544, (John Wiley & Sons, 2004).
-
-
