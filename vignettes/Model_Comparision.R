@@ -1,80 +1,71 @@
 library(iclust2prog)
+library(glmnet)
+library(purrr)
 library(dplyr)
 library(tidyr)
+library(rsample)
 library(tidyposterior)
 theme_set(theme_bw())
 
 ###Load data
 data("erpos_glmnet")
 data("iclust2_glmnet")
-data("brca_glmnet")
 
-#Get plots from fit glmnet
-plot(erpos_glmnet)
-plot(iclust2_glmnet)
-plot(brca_glmnet)
+#Plot glmnet fits
+glmnet::plot.cv.glmnet(erpos_glmnet)
+glmnet::plot.cv.glmnet(iclust2_glmnet_72)
 
-#Extract features
+#Extract features, see my_replace in utils
 erpos_features <- extract_features(erpos_glmnet)
-erpos_features$feature[match("1-Sep", erpos_features$feature)] <- "Sep_1"
+erpos_features$feature <-my_replace(erpos_features$feature)
 
 iclust2_features <- extract_features(iclust2_glmnet)
-iclust2_features$feature[match("`GCSAML-AS1_cna`1", iclust2_features$feature)] <- "GCSAML_AS1_cna1"
-
-brca_features <- extract_features(brca_glmnet)
-brca_features$feature[match("1-Sep", brca_features$feature)] <- "Sep_1"
-brca_features$feature[match("RABEPK_cna-1", brca_features$feature)] <- "RABEPK_cna1"
-brca_features$feature[match("ZBTB34_cna-1", brca_features$feature)] <- "ZBTB34_cna1"
-brca_features$feature[match("HSPA5_cna-1", brca_features$feature)] <- "HSPA5_cna1"
-
+iclust2_features$feature <-my_replace(iclust2_features$feature)
 
 ############ Survival analysis vignette
-brca <- readRDS("//mokey.ads.warwick.ac.uk/User41/u/u1795546/Documents/Abstract_WIN_Symposium/Rdata_brca/brca_data.RDS")
-intclustdat <- brca[brca$intclust == 2, ]
-
-colnames(intclustdat)[match("`GCSAML-AS1_cna`1", colnames(intclustdat))] <- "GCSAML-AS1_cna1"
-colnames(intclustdat)[match("1-Sep", colnames(intclustdat))] <- "Sep_1"
-colnames(intclustdat)[match("RABEPK_cna-1", colnames(intclustdat))] <- "RABEPK_cna1"
-colnames(intclustdat)[match("ZBTB34_cna-1", colnames(intclustdat))] <- "ZBTB34_cna1"
-colnames(intclustdat)[match("HSPA5_cna-1", colnames(intclustdat))] <- "HSPA5_cna1"
-
-intclustdat <-  intclustdat[, unique(c(iclust2_features$feature, erpos_features$feature,  brca_features$feature, "os_months", "os_deceased"))]
-rm(brca)
-devtools::use_data(intclustdat, overwrite = T)
+# brca <- readRDS("/home/mtr/rfactory/brca_data.RDS")
+# cna <- readRDS("/home/mtr/rfactory/cna_expression.RDS")
+# brca <- cbind(brca, cna)
+# intclustdat <- brca[brca$intclust == 2, ]
+# #
+#  colnames(intclustdat) <- my_replace(colnames(intclustdat))
+# #
+# intclustdat <-  intclustdat[, unique(c(iclust2_features$feature, iclust2_features_72$feature, erpos_features$feature,  "os_months", "os_deceased"))]
+# rm(brca)
+# rm(cna)
+# devtools::use_data(intclustdat, overwrite = T)
 
 data("intclustdat")
+intclustdat <- intclustdat %>%
+  dplyr::rename(time = os_months,
+         status = os_deceased) %>%
+  dplyr::mutate(status = status == 1)
 
-library(rsample)
+
 set.seed(9666)
 mc_samp <- mc_cv(intclustdat, strata = "status", times = 100)
 
-library(purrr)
+
 cens_rate <- function(x) mean(analysis(x)$status == 1)
 summary(map_dbl(mc_samp$splits, cens_rate))
 
 
 ############### Create models
-colnames(intclustdat)
-intclustdat[,brca_features$feature[30:54]]
-
 mc_samp$mod_iclust2 <- pmap(list(mc_samp$splits),
                             function(data){
-                              mod_fit(x = data,
-                                      form = iclust2_features)
+                            mod_fit(x = data,
+                                      form = iclust2_features,
+                                    iter = 5)
                             })
 mc_samp$mod_erpos <- pmap(list(mc_samp$splits),
                           function(data){
                             mod_fit(x = data,
-                                    form = erpos_features)
+                                    form = erpos_features,
+                                    iter = 5)
                           })
-mc_samp$mod_pooled <- pmap(list(mc_samp$splits),
-                          function(data){
-                            mod_fit(x = data,
-                                    form = brca_features)
-                          })
+
 
 ############### Get Brier
-
 mc_samp$brier_erpos <- pmap(list(mc_samp$splits, mc_samp$mod_erpos),
                             function(data, model){
                               get_tdbrier(data = data,
@@ -88,25 +79,19 @@ mc_samp$brier_iclust2 <- pmap(list(mc_samp$splits, mc_samp$mod_iclust2),
                                             mod = model,
                                             form = iclust2_features)
                               })
-mc_samp$brier_pooled <- pmap(list(mc_samp$splits, mc_samp$mod_pooled),
-                              function(data, model){
-                                get_tdbrier(data = data,
-                                            mod = model,
-                                            form = brca_features)
-                              })
 
 ###integrate Brier
-mc_samp$ibrier_iclust2 <- map_dbl(mc_samp$brier_iclust2, integrate_tdbrier)
-mc_samp$ibrier_erpos <- map_dbl(mc_samp$brier_erpos, integrate_tdbrier)
-mc_samp$ibrier_pooled <- map_dbl(mc_samp$brier_pooled, integrate_tdbrier)
+mc_samp$iClust2 <- map_dbl(mc_samp$brier_iclust2, integrate_tdbrier)
+mc_samp$'ER+/HER2-' <- map_dbl(mc_samp$brier_erpos, integrate_tdbrier)
+mc_samp$Reference <- map_dbl(mc_samp$brier_erpos, integrate_tdbrier_reference)
 
 
 
 int_brier <- mc_samp %>%
-  select(-matches("^mod"), -starts_with("brier"),  -starts_with("cindex"), -starts_with("roc"), -starts_with("iroc"))
+  dplyr::select(-matches("^mod"), -starts_with("brier"),  -starts_with("cindex"), -starts_with("roc"), -starts_with("iroc"))
 
 int_brier %>%
-  select(-splits) %>%
+  dplyr::select(-splits) %>%
   gather() %>%
   ggplot(aes(x = statistic, col = model, fill = model)) +
   geom_line(stat = "density") +
@@ -115,30 +100,43 @@ int_brier %>%
 
 int_brier <- perf_mod(int_brier, seed = 6507, iter = 5000, transform = logit_trans)
 
-ggplot(tidy(int_brier)) +
-  theme_bw()
-
-ibrier_tab <- summary(tidy(int_brier))
+pdf <- ggplot(tidy(int_brier)) +
+  theme_bw() +
+  ylab("Posterior probability for BS")
+pdf
+ibrier_tab <- tidy(int_brier) %>%
+  group_by(model) %>%
+  summarise(mean = mean(posterior),
+            lower = quantile(posterior, 0.05),
+            upper = quantile(posterior, 0.95))
 as.data.frame(ibrier_tab) %>% mutate_all(my_round)
-
-require(stargazer)
-stargazer(ibrier_tab, type = "latex", summary = FALSE, digits.extra = 3,
-          digits = 3, digit.separator = ".",
-          title = "Bayesian analysis of resampling iBrier")
-
 
 comparisons <- contrast_models(
   int_brier,
-  list_1 = rep("ibrier_iclust2", 2),
-  list_2 = c("ibrier_erpos", "ibrier_pooled"),
-  seed = 4654
+  list_1 = rep("iClust2", 2),
+  list_2 = c( "ER+/HER2-", "Reference"),
+  seed = 2
 )
 
-ggplot(comparisons, size = 0.01) +
+compare <- ggplot(comparisons, size =  0.05) +
   theme_bw()
+compare
 
-summary(comparisons, size = 0.01) %>%
-  select(contrast, starts_with("pract"))
+diff_tab <- summary(comparisons, size = 0.05) %>%
+  dplyr::select(contrast, starts_with("pract"))
+diff_tab
+
+ibrier_Tab <- iclust2prog::post_tab(diff_tab, ibrier_tab)
+ibrier_Tab <- ibrier_Tab %>% mutate_all(my_round)
+#ibrier_Tab[,c(1,3,2,4,5,6,7,8)]
+
+require(stargazer)
+stargazer(ibrier_Tab[,c(1,3,2,4,5,6,7)] , type = "latex", summary = FALSE, digits.extra = 3,
+          digits = 3, digit.separator = ".")
+
+library(gridExtra)
+grid.arrange(pdf, compare, nrow = 1)
+
 
 
 ############### Get ROC

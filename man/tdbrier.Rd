@@ -7,7 +7,7 @@
 \alias{stdbrier.int.reference}
 \alias{get_tdbrier}
 \alias{integrate_tdbrier}
-\alias{tdbrier.int.reference}
+\alias{integrate_tdbrier_reference}
 \title{Calculate tdBrier}
 \usage{
 tdbrier(data, mod, ...)
@@ -16,7 +16,7 @@ get_tdbrier(data, mod, form, ...)
 
 integrate_tdbrier(x, ...)
 
-\method{tdbrier}{int.reference}(x, ...)
+integrate_tdbrier_reference(x, ...)
 }
 \arguments{
 \item{data}{For the default functions, a datframe containing survival

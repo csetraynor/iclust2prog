@@ -89,10 +89,10 @@ integrate_tdbrier <-
   }
 #' @export
 #' @rdname tdbrier
-"tdbrier.int.reference" <-
+integrate_tdbrier_reference <-
   function(x, ...) {
-    stop <- min(max(x$time[!is.na(x$AppErr$matrix)]),
-                max(x$time[!is.na(x$AppErr$Reference)]))
+    stop <- max(x$time[!is.na(x$AppErr$Reference)])
     ibrier <- pec::crps(x, models = "Reference", times = stop)[1]
+    ibrier <- unlist(ibrier)
     return(ibrier)
   }

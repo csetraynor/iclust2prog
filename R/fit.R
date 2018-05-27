@@ -13,8 +13,9 @@
 #' @references
 #'
 #'  Terry M. Therneau and Patricia M. Grambsch (2000).
-#'   _Modeling Survival Data: Extending the Cox Model_.
+#'   Modeling Survival Data: Extending the Cox Model.
 #'   Springer, New York. ISBN 0-387-98784-3.
+#'@export mod_fit
 
 mod_fit <- function(x, form, iter = 0, inits = NA_character_,...) {
   x <- rsample::assessment(x)

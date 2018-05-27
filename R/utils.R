@@ -89,3 +89,33 @@ my_round <- function(x){
     round(x,3)
   }
 }
+
+#' Change - string
+#'
+#' Change - string
+#' @param string \cr
+#' @return replacement
+#' @export my_replace
+my_replace <- function(x){
+
+  x <- gsub("1-Sep", "Sep_1", x)
+  x <- gsub("\\-", "_", x)
+  gsub("`", "", x)
+}
+
+
+#' Function posterior table
+#'
+#' Extract features of a Bayesian model
+#' @param
+#' obj : posterior distribution and contrasts \cr
+#' @return a table for publication
+#' @export post_tab
+
+post_tab <- function(diff_tab, ibrier_tab){
+  ibrier_tab$model <- gsub("ibrier_", "",  ibrier_tab$model)
+  ibrier_tab <- ibrier_tab[c(2,1,3),]
+  diff_tab <- rbind(rep(NA_real_,3) , diff_tab)
+  diff_tab$contrast <- NULL
+  cbind(ibrier_tab, diff_tab)
+}

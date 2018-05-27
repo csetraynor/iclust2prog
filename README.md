@@ -50,9 +50,17 @@ data("intclustdat")
 ?intclustdat
 
 ```
-The vignette iclust2_analysis serves as an approach to the modeling high-dimensional genomic data in survival analysis.
+The vignette Model_comparision serves as an approach to the modeling high-dimensional genomic data in survival analysis. We can for example learn which model has greater performance by comparing the integrated brier score. The figure belllow is the empirical distribution of 100-mc-cross-validation experiment for iclust2, erpos, and pooled analyses.
 
-![brier_diff](https://user-images.githubusercontent.com/33321804/40493198-162cfc8a-5f6a-11e8-97f6-81391a393ba7.png)
+[IBrier_pdf.pdf](https://github.com/csetraynor/iclust2prog/files/2040747/IBrier_pdf.pdf)
+
+In addition, we can perform a post-hoc analysis and by HMC sample draws from the posterior of the IBRIER distributions. The figure bellow shos the results:
+
+[IBRIER_POSTERIOR.pdf](https://github.com/csetraynor/iclust2prog/files/2040757/IBRIER_POSTERIOR.pdf)
+
+Finally, we are going to consider if the differences are significant, whether the model is better or worse than the competitors. We can clarify the differences by the plot bellow.
+
+[diff_plot.pdf](https://github.com/csetraynor/iclust2prog/files/2040766/diff_plot.pdf)
 
 
 
