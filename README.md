@@ -50,7 +50,7 @@ data("intclustdat")
 ?intclustdat
 
 ```
-The vignette Model_comparision serves as an approach to the modeling high-dimensional genomic data in survival analysis. We can for example learn which model has greater performance by comparing the integrated brier score. In addition, we can perform a post-hoc analysis and by HMC sample draws from the posterior distribution of BS. The figure belllow show the empirical distribution of 100-mc-cross-validation experiment for iclust2, and ER+/HER2-.
+The vignette Model_comparision serves as an approach to the modeling of high-dimensional genomic data in survival analysis. We can for example learn which model selection strategy has superior performance by comparing the integrated brier score. In addition, we can perform a post-hoc analysis and by HMC sample draws from the posterior distribution of BS. The figure bellow show the empirical distribution of 100-mc-cross-validation experiment for iclust2, and ER+/HER2-.
 
 ![posterior](https://user-images.githubusercontent.com/33321804/40587915-b5b389da-61cd-11e8-92b4-a8e1ad39a22f.png)
 
@@ -58,7 +58,7 @@ We can quantify the differences via the rope statistic for their practical stati
 
 ![contrasts](https://user-images.githubusercontent.com/33321804/40587912-aa0e0ef2-61cd-11e8-978c-c58a8717a334.png)
 
-Finally, we can also make a plot of the gene pathways involved in our model by using clusterProfiler (Guangchuang Yu et al).
+Finally, we can also make a simple plot of the gene pathways involved in our model by using clusterProfiler (Guangchuang Yu et al).
 
 ![enrichmap](https://user-images.githubusercontent.com/33321804/40587914-b21c17f6-61cd-11e8-9577-e6c995592ea1.png)
 

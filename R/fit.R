@@ -26,5 +26,5 @@ mod_fit <- function(x, form, iter = 0, inits = NA_character_,...) {
   #   inits = rep(0, length(features))
   # }
 
-  coxph(Surv(x$time, x$status)~ . , data = X, init = form$coef, control = coxph.control(iter.max = iter) )
+  suppressWarnings(coxph(Surv(x$time, x$status)~ . , data = X, init = form$coef, control = coxph.control(iter.max = iter) ) )
 }

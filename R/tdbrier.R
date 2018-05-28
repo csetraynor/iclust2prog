@@ -69,7 +69,7 @@ get_tdbrier <-
                                   newdata = pred_dat,
                                   times = timepoints)
     #Calculate brier score
-    suppressWarnings(brier <- pec::pec(probs, Surv(time, status) ~ 1,
+    suppressMessages(brier <- pec::pec(probs, Surv(time, status) ~ 1,
                                        data = pred_dat,
                                        maxtime = max(timepoints),
                                        exact = FALSE,
