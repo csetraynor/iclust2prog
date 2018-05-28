@@ -21,6 +21,7 @@ In addition, it's advisable to also install Stan, Installation and documentation
 ### Installing
 The package has to be installed in your R library either via git clone . or using devtools for example:
 ```
+if(!require("devtools")) install.packages("devtools")
 devtools::install_github("csetraynor/iclust2prog")
 ```
 

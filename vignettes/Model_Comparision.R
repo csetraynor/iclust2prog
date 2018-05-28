@@ -1,3 +1,6 @@
+if(!require("devtools")) install.packages("devtools")
+if(!require("iclust2prog")) devtools::install_github("iclust2prog")
+
 library(iclust2prog)
 library(glmnet)
 library(purrr)
