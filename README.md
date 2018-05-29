@@ -68,6 +68,8 @@ Finally, we can also make a simple plot of the gene pathways involved in our mod
 I would like to thank my supervisors Prof Michael Chappell,
 Dr Neil Evans, Dr Tarj Sahota and Ms Helen Tomkinson for giving me the opportunity to study for this PhD at Warwick. 
 
+In addition, many thanks to the original authors of the study METABRIC (Pereira et al) and the creators of cBioPortal (Gao et al) for makin easier to share knowledge in biology and promote the development of science that may find cures for the difficult cancerous diseases.
+
 ## References
 
   Pereira, B. et al. Nat. Commun. 7, 2016.

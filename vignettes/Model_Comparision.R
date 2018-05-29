@@ -8,6 +8,7 @@ library(dplyr)
 library(tidyr)
 library(rsample)
 library(tidyposterior)
+library(gridExtra)
 theme_set(theme_bw())
 
 ###Load data
@@ -129,141 +130,8 @@ diff_tab <- summary(comparisons, size = 0.05) %>%
   dplyr::select(contrast, starts_with("pract"))
 diff_tab
 
-ibrier_Tab <- iclust2prog::post_tab(diff_tab, ibrier_tab)
+ibrier_Tab <- post_tab(diff_tab, ibrier_tab)
 ibrier_Tab <- ibrier_Tab %>% mutate_all(my_round)
-#ibrier_Tab[,c(1,3,2,4,5,6,7,8)]
 
-require(stargazer)
-stargazer(ibrier_Tab[,c(1,3,2,4,5,6,7)] , type = "latex", summary = FALSE, digits.extra = 3,
-          digits = 3, digit.separator = ".")
-
-library(gridExtra)
 grid.arrange(pdf, compare, nrow = 1)
-
-
-
-############### Get ROC
-
-mc_samp$roc_iclust2 <- pmap(list(mc_samp$splits, mc_samp$mod_iclust2),
-                            function(data, model){
-                              get_tdroc(data = data,
-                                        mod = model)
-                            })
-mc_samp$roc_erpos <- pmap(list(mc_samp$splits, mc_samp$mod_erpos),
-                          function(data, model){
-                            get_tdroc(data = data,
-                                      mod = model
-                            )
-                          })
-mc_samp$roc_iclust2_relaxed <- pmap(list(mc_samp$splits, mc_samp$mod_iclust2_relaxed),
-                                    function(data, model){
-                                      get_tdroc(data = data,
-                                                mod = model
-                                      )
-                                    })
-mc_samp$roc_erpos_relaxed <- pmap(list(mc_samp$splits, mc_samp$mod_erpos_relaxed),
-                                  function(data, model){
-                                    get_tdroc(data = data,
-                                              mod = model
-                                    )
-                                  })
-
-###integrate ROC
-mc_samp$iroc_iclust2 <- map_dbl(mc_samp$roc_iclust2, integrate_tdroc)
-mc_samp$iroc_erpos <- map_dbl(mc_samp$roc_erpos, integrate_tdroc)
-mc_samp$iroc_iclust2_relaxed <- map_dbl(mc_samp$roc_iclust2_relaxed, integrate_tdroc)
-mc_samp$iroc_erpos_relaxed <- map_dbl(mc_samp$roc_erpos_relaxed, integrate_tdroc)
-
-int_roc <- mc_samp %>%
-  select(-matches("^mod"), -starts_with("brier"),  -starts_with("ibrier"), -starts_with("roc"), -starts_with("cindex"))
-
-int_roc %>%
-  select(-splits) %>%
-  gather() %>%
-  ggplot(aes(x = statistic, col = model)) +
-  geom_line(stat = "density") +
-  theme_bw() +
-  theme(legend.position = "top")
-
-
-library(tidyposterior)
-int_roc <- perf_mod(int_roc, seed = 6507, iter = 5000)
-
-ggplot(tidy(int_roc)) +
-  theme_bw()
-
-roc_tab <- summary(tidy(int_roc))
-as.data.frame(roc_tab) %>% mutate_all(my_round)
-
-comparisons <- contrast_models(
-  int_roc,
-  list_1 = rep("iroc_iclust2_relaxed", 3),
-  list_2 = c("iroc_iclust2", "iroc_erpos", "iroc_erpos_relaxed"),
-  seed = 4654
-)
-
-ggplot(comparisons, size = 0.05) +
-  theme_bw()
-
-summary(comparisons, size = 0.05) %>%
-  select(contrast, starts_with("pract"))
-
-
-######Concordance Index
-mc_samp$cindex_iclust2 <- pmap_dbl(list(mc_samp$splits, mc_samp$mod_iclust2),
-                                   function(data, model){
-                                     get_cindex(data = data,
-                                                mod = model)
-                                   })
-mc_samp$cindex_erpos <- pmap_dbl(list(mc_samp$splits, mc_samp$mod_erpos),
-                                 function(data, model){
-                                   get_cindex(data = data,
-                                              mod = model
-                                   )
-                                 })
-mc_samp$cindex_iclust2_relaxed <- pmap_dbl(list(mc_samp$splits, mc_samp$mod_iclust2_relaxed),
-                                           function(data, model){
-                                             get_cindex(data = data,
-                                                        mod = model)
-                                           })
-mc_samp$cindex_erpos_relaxed <- pmap_dbl(list(mc_samp$splits, mc_samp$mod_erpos_relaxed),
-                                         function(data, model){
-                                           get_cindex(data = data,
-                                                      mod = model
-                                           )
-                                         })
-
-cindex_est <- mc_samp %>%
-  select(-matches("^mod"), -starts_with("brier"),  -starts_with("ibrier"), -starts_with("roc"), -starts_with("iroc"))
-
-cindex_est %>%
-  select(-splits) %>%
-  gather() %>%
-  ggplot(aes(x = statistic, col = model)) +
-  geom_line(stat = "density") +
-  theme_bw() +
-  theme(legend.position = "top")
-
-mc_cindex_est <- perf_mod(cindex_est, seed = 6507, iter = 5000)
-
-ggplot(tidy(mc_cindex_est)) +
-  theme_bw()
-
-ci_tab <- summary(tidy(mc_cindex_est))
-as.data.frame(ci_tab) %>% mutate_all(my_round)
-
-comparisons <- contrast_models(
-  mc_cindex_est,
-  list_1 = rep("cindex_iclust2_relaxed",3),
-  list_2 = c("cindex_iclust2", "cindex_erpos_relaxed","cindex_erpos"),
-  seed = 4654
-)
-
-ggplot(comparisons, size = 0.05) +
-  theme_bw()
-
-summary(comparisons, size = 0.05) %>%
-  select(contrast, starts_with("pract"))
-
-
 
