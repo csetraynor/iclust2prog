@@ -36,23 +36,11 @@ geneTable$Hugo_Symbol_cna <- as.character(geneTable$Hugo_Symbol)
 geneTable$Hugo_Symbol <- gsub("_cna.*", "", geneTable$Hugo_Symbol_cna)
 
 ####Load data target names
+#### IMPORTANT : for this function to work the working directory has to be set ~/R/libs/iclust2prog
 data("target_names")
 
 geneTable$Entrez_Gene_Id <- target_names$Entrez_Gene_Id[match(geneTable$Hugo_Symbol, target_names$Hugo_Symbol)]
 geneTable
-
-#Optional Check other Hugo Symbol synonims in databases
-# gene <-  geneTable$Entrez_Gene_Id
-# source("https://bioconductor.org/biocLite.R")
-# biocLite(c("clusterProfiler","org.Hs.eg.db")
-# library(clusterProfiler)
-# library(org.Hs.eg.db)
-#
-# gene.df <- clusterProfiler::bitr(gene,
-#                                  fromType = "ENTREZID",
-#                                  toType = c("ENSEMBL", "SYMBOL"),
-#                                  OrgDb = org.Hs.eg.db)
-# gene.df
 
 geneList <- geneTable[!is.na(geneTable$Entrez_Gene_Id),]$coef
 names(geneList) <- geneTable[!is.na(geneTable$Entrez_Gene_Id),]$Entrez_Gene_Id
@@ -66,3 +54,17 @@ ontology_search(ont = "c5", gene_list = geneTable)
 ontology_search(ont = "c6", gene_list = geneTable)
 ontology_search(ont = "H", gene_list = geneTable)
 
+
+
+#Optional Check other Hugo Symbol synonims in databases
+# gene <-  geneTable$Entrez_Gene_Id
+# source("https://bioconductor.org/biocLite.R")
+# biocLite(c("clusterProfiler","org.Hs.eg.db")
+# library(clusterProfiler)
+# library(org.Hs.eg.db)
+#
+# gene.df <- clusterProfiler::bitr(gene,
+#                                  fromType = "ENTREZID",
+#                                  toType = c("ENSEMBL", "SYMBOL"),
+#                                  OrgDb = org.Hs.eg.db)
+# gene.df
