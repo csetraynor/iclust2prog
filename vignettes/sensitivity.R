@@ -1,7 +1,7 @@
 if(!require("devtools")) install.packages("devtools")
-if(!require("iclust2prog")) devtools::install_github("iclust2prog")
+if(!require("randprog")) devtools::install_github("randprog")
 
-library(iclust2prog)
+library(randprog)
 library(glmnet)
 library(purrr)
 library(dplyr)
@@ -13,47 +13,30 @@ theme_set(theme_bw())
 
 ###Load data
 data("erpos_glmnet")
-data("iclust2_glmnet")
+data("rand_glmnet")
 
 #Plot glmnet fits
 glmnet::plot.cv.glmnet(erpos_glmnet)
-glmnet::plot.cv.glmnet(iclust2_glmnet_72)
+glmnet::plot.cv.glmnet(rand_glmnet)
 
 #Extract features, see my_replace in utils
 erpos_features <- extract_features(erpos_glmnet)
 erpos_features$feature <-my_replace(erpos_features$feature)
 
-iclust2_features <- extract_features(iclust2_glmnet)
-iclust2_features$feature <-my_replace(iclust2_features$feature)
+rand_features <- extract_features(rand_glmnet)
+rand_features$feature <-my_replace(rand_features$feature)
 
 ############ Survival analysis vignette
-# brca <- readRDS("/home/mtr/rfactory/brca_data.RDS")
-# cna <- readRDS("/home/mtr/rfactory/cna_expression.RDS")
-# brca <- cbind(brca, cna)
-# intclustdat <- brca[brca$intclust == 2,
-# intclustdat = readRDS("C:/RFactory/parallel/ERpos.RDS")
-# set.seed(1)
-# intclustdat = intclustdat[sample(nrow(intclustdat), 72), ]
-#
-#
-# colnames(intclustdat) <- my_replace(colnames(intclustdat))
-#
-# #
-#intclustdat <-  intclustdat[, unique(c(iclust2_features$feature, erpos_features$feature,  "os_months", "os_deceased"))]
-# rm(brca)
-# rm(cna)
-# devtools::use_data(intclustdat, overwrite = T)
 
-
-data("intclustdat")
-intclustdat <- intclustdat %>%
+data("sensitivitydata")
+sensitivitydata <- sensitivitydata %>%
   dplyr::rename(time = os_months,
-         status = os_deceased) %>%
+                status = os_deceased) %>%
   dplyr::mutate(status = status == 1)
 
 
 set.seed(9666)
-mc_samp <- mc_cv(intclustdat, strata = "status", times = 100)
+mc_samp <- mc_cv(sensitivitydata, strata = "status", times = 100)
 
 
 cens_rate <- function(x) mean(analysis(x)$status == 1)
@@ -61,11 +44,11 @@ summary(map_dbl(mc_samp$splits, cens_rate))
 
 
 ############### Create models
-mc_samp$mod_iclust2 <- pmap(list(mc_samp$splits),
+mc_samp$mod_rand <- pmap(list(mc_samp$splits),
                             function(data){
-                            mod_fit(x = data,
-                                      form = iclust2_features,
-                                    iter = 5)
+                              mod_fit(x = data,
+                                      form = rand_features,
+                                      iter = 5)
                             })
 mc_samp$mod_erpos <- pmap(list(mc_samp$splits),
                           function(data){
@@ -83,15 +66,15 @@ mc_samp$brier_erpos <- pmap(list(mc_samp$splits, mc_samp$mod_erpos),
                                           form = erpos_features
                               )
                             })
-mc_samp$brier_iclust2 <- pmap(list(mc_samp$splits, mc_samp$mod_iclust2),
+mc_samp$brier_rand <- pmap(list(mc_samp$splits, mc_samp$mod_rand),
                               function(data, model){
                                 get_tdbrier(data = data,
                                             mod = model,
-                                            form = iclust2_features)
+                                            form = rand_features)
                               })
 
 ###integrate Brier
-mc_samp$iClust2 <- map_dbl(mc_samp$brier_iclust2, integrate_tdbrier)
+mc_samp$rand <- map_dbl(mc_samp$brier_rand, integrate_tdbrier)
 mc_samp$'ER+/HER2-' <- map_dbl(mc_samp$brier_erpos, integrate_tdbrier)
 mc_samp$Reference <- map_dbl(mc_samp$brier_erpos, integrate_tdbrier_reference)
 
@@ -123,7 +106,7 @@ as.data.frame(ibrier_tab) %>% mutate_all(my_round)
 
 comparisons <- contrast_models(
   int_brier,
-  list_1 = rep("iClust2", 2),
+  list_1 = rep("rand", 2),
   list_2 = c( "ER+/HER2-", "Reference"),
   seed = 2
 )
