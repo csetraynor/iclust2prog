@@ -1,4 +1,5 @@
 ##### Relaxed Cox
+devtools::document()
 library(iclust2prog)
 library(glmnet)
 data("intclustdat")
@@ -32,8 +33,12 @@ if("age_std" %in% genedata$Hugo_Symbol){
   geneTable <- genedata
 }
 
+
+geneTable <- int_coeff_tab %>%
+  dplyr::rename(Hugo_Symbol = model)
 geneTable$Hugo_Symbol_cna <- as.character(geneTable$Hugo_Symbol)
 geneTable$Hugo_Symbol <- gsub("_cna.*", "", geneTable$Hugo_Symbol_cna)
+
 
 ####Load data target names
 #### IMPORTANT : for this function to work the working directory has to be set ~/R/libs/iclust2prog
@@ -42,19 +47,22 @@ data("target_names")
 geneTable$Entrez_Gene_Id <- target_names$Entrez_Gene_Id[match(geneTable$Hugo_Symbol, target_names$Hugo_Symbol)]
 geneTable
 
-geneList <- geneTable[!is.na(geneTable$Entrez_Gene_Id),]$coef
+geneList <- geneTable[!is.na(geneTable$Entrez_Gene_Id),]$HR
 names(geneList) <- geneTable[!is.na(geneTable$Entrez_Gene_Id),]$Entrez_Gene_Id
 geneList
 
 ontology_search(ont = "c1", gene_list = geneTable)
 ontology_search(ont = "c2", gene_list = geneTable)
 ontology_search(ont = "c3", gene_list = geneTable)
+#cancer modules
 ontology_search(ont = "c4", gene_list = geneTable)
+#gene ontology gene set
 ontology_search(ont = "c5", gene_list = geneTable)
+#oncogenic signatures
 ontology_search(ont = "c6", gene_list = geneTable)
 ontology_search(ont = "H", gene_list = geneTable)
 
-
+oncosig <- ontology_search(ont = "c6", gene_list = geneTable)
 
 #Optional Check other Hugo Symbol synonims in databases
 # gene <-  geneTable$Entrez_Gene_Id

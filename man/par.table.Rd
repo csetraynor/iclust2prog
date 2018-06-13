@@ -4,7 +4,7 @@
 \alias{par.table}
 \title{Function par table}
 \usage{
-par.table(fit)
+par.table(fit, log_scale = FALSE)
 }
 \arguments{
 \item{obj}{: survival coxph fit. \cr}

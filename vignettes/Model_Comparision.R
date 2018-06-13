@@ -55,10 +55,8 @@ intclustdat <- intclustdat %>%
 set.seed(9666)
 mc_samp <- mc_cv(intclustdat, strata = "status", times = 100)
 
-
 cens_rate <- function(x) mean(analysis(x)$status == 1)
 summary(map_dbl(mc_samp$splits, cens_rate))
-
 
 ############### Create models
 mc_samp$mod_iclust2 <- pmap(list(mc_samp$splits),
