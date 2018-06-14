@@ -1,7 +1,6 @@
 if(!require("devtools")) install.packages("devtools")
 if(!require("iclust2prog")) devtools::install_github("iclust2prog")
 
-library(iclust2prog)
 library(glmnet)
 library(purrr)
 library(dplyr)
@@ -9,51 +8,51 @@ library(tidyr)
 library(rsample)
 library(tidyposterior)
 library(gridExtra)
+library(bindrcpp)
 theme_set(theme_bw())
 
-###Load data
-data("erpos_glmnet")
-data("iclust2_glmnet")
 
+###Load data
+data("eph2n_glmnet")
+data("iclust2_glmnet")
+eph2n_glmnet <- readRDS("//mokey.ads.warwick.ac.uk/User41/u/u1795546/Documents/Abstract_WIN_Symposium/erpos_her2neg_lasso.RDS")
+iclust2_glmnet <- readRDS("//mokey.ads.warwick.ac.uk/User41/u/u1795546/Documents/Abstract_WIN_Symposium/ic2_lasso.RDS")
+devtools::use_data(iclust2_glmnet, overwrite = T)
 #Plot glmnet fits
-glmnet::plot.cv.glmnet(erpos_glmnet)
-glmnet::plot.cv.glmnet(iclust2_glmnet_72)
+glmnet::plot.cv.glmnet(eph2n_glmnet)
+glmnet::plot.cv.glmnet(iclust2_glmnet)
 
 #Extract features, see my_replace in utils
-erpos_features <- extract_features(erpos_glmnet)
-erpos_features$feature <-my_replace(erpos_features$feature)
+eph2n_features <- extract_features(eph2n_glmnet)
+eph2n_features$feature <-my_replace(eph2n_features$feature)
 
 iclust2_features <- extract_features(iclust2_glmnet)
 iclust2_features$feature <-my_replace(iclust2_features$feature)
 
 ############ Survival analysis vignette
-# brca <- readRDS("/home/mtr/rfactory/brca_data.RDS")
-# cna <- readRDS("/home/mtr/rfactory/cna_expression.RDS")
-# brca <- cbind(brca, cna)
-# intclustdat <- brca[brca$intclust == 2,
-# intclustdat = readRDS("C:/RFactory/parallel/ERpos.RDS")
+combined <- readRDS("//mokey.ads.warwick.ac.uk/User41/u/u1795546/Documents/Abstract_WIN_Symposium/combined.RDS")
+ic2dat <- combined[combined$intclust == 2,]
+# ic2dat = readRDS("C:/RFactory/parallel/eph2n.RDS")
 # set.seed(1)
-# intclustdat = intclustdat[sample(nrow(intclustdat), 72), ]
-#
-#
-# colnames(intclustdat) <- my_replace(colnames(intclustdat))
-#
-# #
-#intclustdat <-  intclustdat[, unique(c(iclust2_features$feature, erpos_features$feature,  "os_months", "os_deceased"))]
-# rm(brca)
-# rm(cna)
-# devtools::use_data(intclustdat, overwrite = T)
+# ic2dat = ic2dat[sample(nrow(ic2dat), 72), ]
 
 
-data("intclustdat")
-intclustdat <- intclustdat %>%
+colnames(ic2dat) <- my_replace(colnames(ic2dat))
+
+#
+ic2dat <-  ic2dat[, unique(c(iclust2_features$feature, eph2n_features$feature,  "os_months", "os_deceased"))]
+devtools::use_data(ic2dat, overwrite = T)
+
+
+data("ic2dat")
+ic2dat <- ic2dat %>%
   dplyr::rename(time = os_months,
          status = os_deceased) %>%
   dplyr::mutate(status = status == 1)
 
 
 set.seed(9666)
-mc_samp <- mc_cv(intclustdat, strata = "status", times = 100)
+mc_samp <- mc_cv(ic2dat, strata = "status", times = 100)
 
 cens_rate <- function(x) mean(analysis(x)$status == 1)
 summary(map_dbl(mc_samp$splits, cens_rate))
@@ -63,22 +62,22 @@ mc_samp$mod_iclust2 <- pmap(list(mc_samp$splits),
                             function(data){
                             mod_fit(x = data,
                                       form = iclust2_features,
-                                    iter = 5)
+                                    iter = 1)
                             })
-mc_samp$mod_erpos <- pmap(list(mc_samp$splits),
+mc_samp$mod_eph2n <- pmap(list(mc_samp$splits),
                           function(data){
                             mod_fit(x = data,
-                                    form = erpos_features,
-                                    iter = 5)
+                                    form = eph2n_features,
+                                    iter = 1)
                           })
 
 
 ############### Get Brier
-mc_samp$brier_erpos <- pmap(list(mc_samp$splits, mc_samp$mod_erpos),
+mc_samp$brier_eph2n <- pmap(list(mc_samp$splits, mc_samp$mod_eph2n),
                             function(data, model){
                               get_tdbrier(data = data,
                                           mod = model,
-                                          form = erpos_features
+                                          form = eph2n_features
                               )
                             })
 mc_samp$brier_iclust2 <- pmap(list(mc_samp$splits, mc_samp$mod_iclust2),
@@ -89,9 +88,9 @@ mc_samp$brier_iclust2 <- pmap(list(mc_samp$splits, mc_samp$mod_iclust2),
                               })
 
 ###integrate Brier
-mc_samp$iClust2 <- map_dbl(mc_samp$brier_iclust2, integrate_tdbrier)
-mc_samp$'ER+/HER2-' <- map_dbl(mc_samp$brier_erpos, integrate_tdbrier)
-mc_samp$Reference <- map_dbl(mc_samp$brier_erpos, integrate_tdbrier_reference)
+mc_samp$'iC-2' <- map_dbl(mc_samp$brier_iclust2, integrate_tdbrier)
+mc_samp$'ER+/HER2-' <- map_dbl(mc_samp$brier_eph2n, integrate_tdbrier)
+mc_samp$Reference <- map_dbl(mc_samp$brier_eph2n, integrate_tdbrier_reference)
 
 
 
@@ -108,11 +107,13 @@ int_brier %>%
 
 int_brier <- perf_mod(int_brier, seed = 6507, iter = 5000, transform = logit_trans)
 
-pdf <- ggplot(tidy(int_brier)) +
+pdf <- ggplot(tidy(int_brier)%>%
+                filter(model != "Reference")) +
   theme_bw() +
-  ylab("Posterior probability for BS")
+  ylab("Posterior probability of BS")
 pdf
 ibrier_tab <- tidy(int_brier) %>%
+  filter(model != "Reference") %>%
   group_by(model) %>%
   summarise(mean = mean(posterior),
             lower = quantile(posterior, 0.05),
@@ -121,21 +122,21 @@ as.data.frame(ibrier_tab) %>% mutate_all(my_round)
 
 comparisons <- contrast_models(
   int_brier,
-  list_1 = rep("iClust2", 2),
-  list_2 = c( "ER+/HER2-", "Reference"),
-  seed = 2
+  list_1 = rep("iC-2", 1),
+  list_2 = c( "ER+/HER2-"),
+  seed = 20
 )
 
-compare <- ggplot(comparisons, size =  0.05) +
+compare <- ggplot(comparisons, size =  0.01) +
   theme_bw()
-compare
+compare <- compare + ylab("") + xlab("DeltaBS")
 
-diff_tab <- summary(comparisons, size = 0.05) %>%
+diff_tab <- summary(comparisons, size = 0.01) %>%
   dplyr::select(contrast, starts_with("pract"))
 diff_tab
 
 ibrier_Tab <- post_tab(diff_tab, ibrier_tab)
 ibrier_Tab <- ibrier_Tab %>% mutate_all(my_round)
-
+pdf("dens1.pdf", 7 ,5)
 grid.arrange(pdf, compare, nrow = 1)
-
+dev.off()

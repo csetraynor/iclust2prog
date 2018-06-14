@@ -2,19 +2,19 @@ devtools::document()
 # library(iclust2prog)
 library(glmnet)
 library(purrr)
-data("intclustdat")
-intclustdat <- intclustdat %>%
+data("ic2dat")
+ic2dat <- ic2dat %>%
   dplyr::rename(time = os_months,
                 status = os_deceased) %>%
   dplyr::mutate(status = status == 1)
 data("iclust2_glmnet")
 
 set.seed(9666)
-mc_samp <- bootstraps(intclustdat, strata = "status", times = 100)
+mc_samp <- bootstraps(ic2dat, strata = "status", times = 100)
 
 iclust2_features <- extract_features(iclust2_glmnet)
 iclust2_features$feature <-my_replace(iclust2_features$feature)
-colnames(intclustdat) <- my_replace(colnames(intclustdat))
+colnames(ic2dat) <- my_replace(colnames(ic2dat))
 
 mc_samp$mod_iclust2 <- pmap(list(mc_samp$splits),
                             function(data){
@@ -44,4 +44,25 @@ int_coeff_tab <- tidy(int_coeff) %>%
             upper = exp(quantile(posterior, 0.95)) )
 as.data.frame(int_coeff_tab) %>% dplyr::mutate_all(my_round)
 
-devtools::use_data(int_coeff_tab)
+devtools::use_data(int_coeff_tab, overwrite = T)
+
+
+
+
+coeff_tab <- data.frame('Oncogenic Signature' = c('K-ras', 'LEF1', 'PI3K/Akt'),
+           HR = c(sum(geneTable[geneTable$Hugo_Symbol == 'NGF',]$HR,
+                      geneTable[geneTable$Hugo_Symbol == 'GPR4',]$HR)/2,
+                  geneTable[geneTable$Hugo_Symbol == 'MAP1B',]$HR,
+                  geneTable[geneTable$Hugo_Symbol == 'NGF',]$HR),
+           'lower 0.05' = c(sum(geneTable[geneTable$Hugo_Symbol == 'NGF',]$lower,
+                                geneTable[geneTable$Hugo_Symbol == 'GPR4',]$lower)/2,
+                            geneTable[geneTable$Hugo_Symbol == 'MAP1B',]$lower,
+                            geneTable[geneTable$Hugo_Symbol == 'NGF',]$lower),
+           'upper 0.95' = c(sum(geneTable[geneTable$Hugo_Symbol == 'NGF',]$upper,
+                                geneTable[geneTable$Hugo_Symbol == 'GPR4',]$upper)/2,
+                            geneTable[geneTable$Hugo_Symbol == 'MAP1B',]$upper,
+                            geneTable[geneTable$Hugo_Symbol == 'NGF',]$upper) )
+coeff_tab <- as.data.frame(coeff_tab) %>%
+  mutate_at(vars('Oncogenic.Signature'), as.character) %>%
+  mutate_all(my_round)
+write.csv(coeff_tab, 'coeff_tab.csv', row.names = FALSE)

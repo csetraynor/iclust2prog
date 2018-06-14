@@ -2,7 +2,7 @@
 devtools::document()
 library(iclust2prog)
 library(glmnet)
-data("intclustdat")
+data("ic2dat")
 intclustdat <- intclustdat %>%
   dplyr::rename(time = os_months,
          status = os_deceased) %>%
@@ -76,3 +76,7 @@ oncosig <- ontology_search(ont = "c6", gene_list = geneTable)
 #                                  toType = c("ENSEMBL", "SYMBOL"),
 #                                  OrgDb = org.Hs.eg.db)
 # gene.df
+
+
+
+

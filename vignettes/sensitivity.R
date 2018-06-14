@@ -12,31 +12,39 @@ library(gridExtra)
 theme_set(theme_bw())
 
 ###Load data
-data("erpos_glmnet")
-data("rand_glmnet")
+data("eph2n_glmnet")
+data("samp_glmnet")
+samp_glmnet <- readRDS("//mokey.ads.warwick.ac.uk/User41/u/u1795546/Documents/Abstract_WIN_Symposium/sens2_lasso.RDS")
+devtools::use_data(samp_glmnet)
 
 #Plot glmnet fits
-glmnet::plot.cv.glmnet(erpos_glmnet)
-glmnet::plot.cv.glmnet(rand_glmnet)
+glmnet::plot.cv.glmnet(eph2n_glmnet)
+glmnet::plot.cv.glmnet(samp_glmnet)
 
 #Extract features, see my_replace in utils
-erpos_features <- extract_features(erpos_glmnet)
-erpos_features$feature <-my_replace(erpos_features$feature)
+eph2n_features <- extract_features(eph2n_glmnet)
+eph2n_features$feature <-my_replace(eph2n_features$feature)
 
-rand_features <- extract_features(rand_glmnet)
-rand_features$feature <-my_replace(rand_features$feature)
+samp_features <- extract_features(samp_glmnet)
+samp_features$feature <-my_replace(samp_features$feature)
 
 ############ Survival analysis vignette
+set.seed(10)
+sampdata <- combined[sample(1:nrow(combined), 72),]
+colnames(sampdata) <- my_replace(colnames(sampdata))
+#
+sampdata <-  sampdata[, unique(c(samp_features$feature, eph2n_features$feature,  "os_months", "os_deceased"))]
+devtools::use_data(sampdata, overwrite = T)
 
-data("sensitivitydata")
-sensitivitydata <- sensitivitydata %>%
+data("sampdata")
+sampdata <- sampdata %>%
   dplyr::rename(time = os_months,
                 status = os_deceased) %>%
   dplyr::mutate(status = status == 1)
 
 
 set.seed(9666)
-mc_samp <- mc_cv(sensitivitydata, strata = "status", times = 100)
+mc_samp <- mc_cv(sampdata, strata = "status", times = 100)
 
 
 cens_rate <- function(x) mean(analysis(x)$status == 1)
@@ -47,36 +55,36 @@ summary(map_dbl(mc_samp$splits, cens_rate))
 mc_samp$mod_rand <- pmap(list(mc_samp$splits),
                             function(data){
                               mod_fit(x = data,
-                                      form = rand_features,
-                                      iter = 5)
+                                      form = samp_features,
+                                      iter = 1)
                             })
-mc_samp$mod_erpos <- pmap(list(mc_samp$splits),
+mc_samp$mod_eph2n <- pmap(list(mc_samp$splits),
                           function(data){
                             mod_fit(x = data,
-                                    form = erpos_features,
-                                    iter = 5)
+                                    form = eph2n_features,
+                                    iter = 1)
                           })
 
 
 ############### Get Brier
-mc_samp$brier_erpos <- pmap(list(mc_samp$splits, mc_samp$mod_erpos),
+mc_samp$brier_eph2n <- pmap(list(mc_samp$splits, mc_samp$mod_eph2n),
                             function(data, model){
                               get_tdbrier(data = data,
                                           mod = model,
-                                          form = erpos_features
+                                          form = eph2n_features
                               )
                             })
 mc_samp$brier_rand <- pmap(list(mc_samp$splits, mc_samp$mod_rand),
                               function(data, model){
                                 get_tdbrier(data = data,
                                             mod = model,
-                                            form = rand_features)
+                                            form = samp_features)
                               })
 
 ###integrate Brier
-mc_samp$rand <- map_dbl(mc_samp$brier_rand, integrate_tdbrier)
-mc_samp$'ER+/HER2-' <- map_dbl(mc_samp$brier_erpos, integrate_tdbrier)
-mc_samp$Reference <- map_dbl(mc_samp$brier_erpos, integrate_tdbrier_reference)
+mc_samp$'Z' <- map_dbl(mc_samp$brier_rand, integrate_tdbrier)
+mc_samp$'ER+/HER2-' <- map_dbl(mc_samp$brier_eph2n, integrate_tdbrier)
+mc_samp$Null <- map_dbl(mc_samp$brier_eph2n, integrate_tdbrier_reference)
 
 
 
@@ -93,9 +101,10 @@ int_brier %>%
 
 int_brier <- perf_mod(int_brier, seed = 6507, iter = 5000, transform = logit_trans)
 
-pdf <- ggplot(tidy(int_brier)) +
+pdf <- ggplot(tidy(int_brier) %>%
+  dplyr::filter(model != "Null", model != "Random Sample") )+
   theme_bw() +
-  ylab("Posterior probability for BS")
+  ylab("Posterior probability of BS")
 pdf
 ibrier_tab <- tidy(int_brier) %>%
   group_by(model) %>%
@@ -106,14 +115,14 @@ as.data.frame(ibrier_tab) %>% mutate_all(my_round)
 
 comparisons <- contrast_models(
   int_brier,
-  list_1 = rep("rand", 2),
-  list_2 = c( "ER+/HER2-", "Reference"),
+  list_1 = rep("Z", 1),
+  list_2 = c( "ER+/HER2-"),
   seed = 2
 )
 
-compare <- ggplot(comparisons, size =  0.05) +
+compare <- ggplot(comparisons, size =  0.01) +
   theme_bw()
-compare
+compare <- compare + ylab("") + xlab("DeltaBS")
 
 diff_tab <- summary(comparisons, size = 0.05) %>%
   dplyr::select(contrast, starts_with("pract"))
@@ -122,5 +131,6 @@ diff_tab
 ibrier_Tab <- post_tab(diff_tab, ibrier_tab)
 ibrier_Tab <- ibrier_Tab %>% mutate_all(my_round)
 
+pdf("sensitivity3.pdf", 7 ,5)
 grid.arrange(pdf, compare, nrow = 1)
-
+dev.off()
