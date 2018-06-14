@@ -175,3 +175,9 @@ get_mat <- function(hlist){
   hmat = hmat[hmat[,1] != -99,hmat[,1] != -99]
   hmat
 }
+
+net_gene <- function(oncosig, path){
+  kras <- oncosig[grep(path, names(oncosig))]
+  unique(unlist(kras))
+}
+

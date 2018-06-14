@@ -3,18 +3,14 @@ devtools::document()
 library(iclust2prog)
 library(glmnet)
 data("ic2dat")
-intclustdat <- intclustdat %>%
-  dplyr::rename(time = os_months,
-         status = os_deceased) %>%
-  dplyr::mutate(status = status == 1)
 data("iclust2_glmnet")
 
 iclust2_features <- extract_features(iclust2_glmnet)
 iclust2_features$feature <-my_replace(iclust2_features$feature)
-colnames(intclustdat) <- my_replace(colnames(intclustdat))
+colnames(ic2dat) <- my_replace(colnames(ic2dat))
 
-X <- intclustdat[,iclust2_features$feature]
-relaxed_enet_fit <- suppressWarnings(coxph(Surv(intclustdat$time, intclustdat$status)~ . ,
+X <- ic2dat[,iclust2_features$feature]
+relaxed_enet_fit <- suppressWarnings(coxph(Surv(ic2dat$time, ic2dat$status)~ . ,
   data = X, init = iclust2_features$coef, control = coxph.control(iter.max = 5) ))
 
 
@@ -32,13 +28,10 @@ if("age_std" %in% genedata$Hugo_Symbol){
 }else{
   geneTable <- genedata
 }
-
-
 geneTable <- int_coeff_tab %>%
   dplyr::rename(Hugo_Symbol = model)
 geneTable$Hugo_Symbol_cna <- as.character(geneTable$Hugo_Symbol)
 geneTable$Hugo_Symbol <- gsub("_cna.*", "", geneTable$Hugo_Symbol_cna)
-
 
 ####Load data target names
 #### IMPORTANT : for this function to work the working directory has to be set ~/R/libs/iclust2prog
@@ -63,6 +56,11 @@ ontology_search(ont = "c6", gene_list = geneTable)
 ontology_search(ont = "H", gene_list = geneTable)
 
 oncosig <- ontology_search(ont = "c6", gene_list = geneTable)
+kras <- net_gene(oncosig = oncosig, path = "KRAS")
+kras <- geneTable$Hugo_Symbol_cna[match( kras, geneTable$Entrez_Gene_Id)]
+lef1 <- net_gene(oncosig = oncosig, path = "LEF1")
+lef1 <- geneTable$Hugo_Symbol_cna[match( lef1, geneTable$Entrez_Gene_Id)]
+net_gene(oncosig = oncosig, path = "MTOR")
 
 #Optional Check other Hugo Symbol synonims in databases
 # gene <-  geneTable$Entrez_Gene_Id

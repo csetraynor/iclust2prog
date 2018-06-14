@@ -3,11 +3,6 @@ devtools::document()
 library(glmnet)
 library(purrr)
 data("ic2dat")
-ic2dat <- ic2dat %>%
-  dplyr::rename(time = os_months,
-                status = os_deceased) %>%
-  dplyr::mutate(status = status == 1)
-data("iclust2_glmnet")
 
 set.seed(9666)
 mc_samp <- bootstraps(ic2dat, strata = "status", times = 100)
@@ -35,9 +30,14 @@ mc_samp$GeneTab_iclust2 <- pmap(list(mc_samp$CoxTab_iclust2),
 
 coeff_Tab <- get_coeff_Tab(mc_samp)
 
-int_coeff <- tidyposterior::perf_mod(coeff_Tab, seed = 6507, iter = 5000)
+gene_mod <- coeff_Tab %>%
+  dplyr::mutate(kras = rowSums(.[kras])) %>%
+  dplyr::select(splits, id, kras, lef1) %>%
+  dplyr::rename(lef1 = MAP1B)
 
-int_coeff_tab <- tidy(int_coeff) %>%
+int_gene <- tidyposterior::perf_mod(gene_mod, seed = 6507, iter = 5000)
+
+int_gene_tab <- tidy(int_gene) %>%
   dplyr::group_by(model) %>%
   dplyr::summarise(HR = exp(mean(posterior)),
             lower = exp(quantile(posterior, 0.05)),

@@ -9,15 +9,13 @@ library(rsample)
 library(tidyposterior)
 library(gridExtra)
 library(bindrcpp)
+devtools::document()
 theme_set(theme_bw())
-
 
 ###Load data
 data("eph2n_glmnet")
 data("iclust2_glmnet")
-eph2n_glmnet <- readRDS("//mokey.ads.warwick.ac.uk/User41/u/u1795546/Documents/Abstract_WIN_Symposium/erpos_her2neg_lasso.RDS")
-iclust2_glmnet <- readRDS("//mokey.ads.warwick.ac.uk/User41/u/u1795546/Documents/Abstract_WIN_Symposium/ic2_lasso.RDS")
-devtools::use_data(iclust2_glmnet, overwrite = T)
+
 #Plot glmnet fits
 glmnet::plot.cv.glmnet(eph2n_glmnet)
 glmnet::plot.cv.glmnet(iclust2_glmnet)
@@ -30,26 +28,8 @@ iclust2_features <- extract_features(iclust2_glmnet)
 iclust2_features$feature <-my_replace(iclust2_features$feature)
 
 ############ Survival analysis vignette
-combined <- readRDS("//mokey.ads.warwick.ac.uk/User41/u/u1795546/Documents/Abstract_WIN_Symposium/combined.RDS")
-ic2dat <- combined[combined$intclust == 2,]
-# ic2dat = readRDS("C:/RFactory/parallel/eph2n.RDS")
-# set.seed(1)
-# ic2dat = ic2dat[sample(nrow(ic2dat), 72), ]
-
-
-colnames(ic2dat) <- my_replace(colnames(ic2dat))
-
-#
-ic2dat <-  ic2dat[, unique(c(iclust2_features$feature, eph2n_features$feature,  "os_months", "os_deceased"))]
-devtools::use_data(ic2dat, overwrite = T)
-
 
 data("ic2dat")
-ic2dat <- ic2dat %>%
-  dplyr::rename(time = os_months,
-         status = os_deceased) %>%
-  dplyr::mutate(status = status == 1)
-
 
 set.seed(9666)
 mc_samp <- mc_cv(ic2dat, strata = "status", times = 100)
@@ -91,8 +71,6 @@ mc_samp$brier_iclust2 <- pmap(list(mc_samp$splits, mc_samp$mod_iclust2),
 mc_samp$'iC-2' <- map_dbl(mc_samp$brier_iclust2, integrate_tdbrier)
 mc_samp$'ER+/HER2-' <- map_dbl(mc_samp$brier_eph2n, integrate_tdbrier)
 mc_samp$Reference <- map_dbl(mc_samp$brier_eph2n, integrate_tdbrier_reference)
-
-
 
 int_brier <- mc_samp %>%
   dplyr::select(-matches("^mod"), -starts_with("brier"),  -starts_with("cindex"), -starts_with("roc"), -starts_with("iroc"))

@@ -9,13 +9,12 @@ library(tidyr)
 library(rsample)
 library(tidyposterior)
 library(gridExtra)
+devtools::document()
 theme_set(theme_bw())
 
 ###Load data
 data("eph2n_glmnet")
 data("samp_glmnet")
-samp_glmnet <- readRDS("//mokey.ads.warwick.ac.uk/User41/u/u1795546/Documents/Abstract_WIN_Symposium/sens2_lasso.RDS")
-devtools::use_data(samp_glmnet)
 
 #Plot glmnet fits
 glmnet::plot.cv.glmnet(eph2n_glmnet)
@@ -29,27 +28,14 @@ samp_features <- extract_features(samp_glmnet)
 samp_features$feature <-my_replace(samp_features$feature)
 
 ############ Survival analysis vignette
-set.seed(10)
-sampdata <- combined[sample(1:nrow(combined), 72),]
-colnames(sampdata) <- my_replace(colnames(sampdata))
-#
-sampdata <-  sampdata[, unique(c(samp_features$feature, eph2n_features$feature,  "os_months", "os_deceased"))]
-devtools::use_data(sampdata, overwrite = T)
 
 data("sampdata")
-sampdata <- sampdata %>%
-  dplyr::rename(time = os_months,
-                status = os_deceased) %>%
-  dplyr::mutate(status = status == 1)
-
 
 set.seed(9666)
 mc_samp <- mc_cv(sampdata, strata = "status", times = 100)
 
-
 cens_rate <- function(x) mean(analysis(x)$status == 1)
 summary(map_dbl(mc_samp$splits, cens_rate))
-
 
 ############### Create models
 mc_samp$mod_rand <- pmap(list(mc_samp$splits),
@@ -85,8 +71,6 @@ mc_samp$brier_rand <- pmap(list(mc_samp$splits, mc_samp$mod_rand),
 mc_samp$'Z' <- map_dbl(mc_samp$brier_rand, integrate_tdbrier)
 mc_samp$'ER+/HER2-' <- map_dbl(mc_samp$brier_eph2n, integrate_tdbrier)
 mc_samp$Null <- map_dbl(mc_samp$brier_eph2n, integrate_tdbrier_reference)
-
-
 
 int_brier <- mc_samp %>%
   dplyr::select(-matches("^mod"), -starts_with("brier"),  -starts_with("cindex"), -starts_with("roc"), -starts_with("iroc"))
