@@ -14,7 +14,18 @@ gene_expr <- readRDS("/home/mtr/rfactory/brca_metabric/brca_data.RDS")
 gene_cna <- readRDS("/home/mtr/rfactory/brca_metabric/cna_expression.RDS")
 combined <- cbind(gene_expr, gene_cna)
 
+library(cgdsr)
+mycgds = CGDS("http://www.cbioportal.org/public-portal/")
 
+the_study_list = getCancerStudies(mycgds)[25, 1]
+case_list = getCaseLists(mycgds, the_study_list)[2, 1]
+clinical_data <- getClinicalData(mycgds, case_list)
+colnames(clinical_data) <- tolower(colnames(clinical_data))
+clinical_data <- tibble::rownames_to_column(clinical_data, var = "patient_id")
+dplyr::glimpse(clinical_data)
+treatment_effect <- clinical_data %>%
+  select(patient_id, chemotherapy, radio_therapy)
+devtools::use_data(treatment_effect)
 
 
 str(clinical_data)
@@ -32,7 +43,8 @@ er_status <-gsub("\\.", "-", er_status)
 her2 <- gsub("\\.", "-", her2 )
 three_gene <- gsub("\\.", "-", three_gene )
 
-
+er <- clinical_data[ (clinical_data$patient_id %in% er_status & clinical_data$patient_id %in% her2) |  clinical_data$patient_id %in% three_gene,]
+iclust2 <- clinical_data[clinical_data$intclust == 2,]
 
 
 combined <- combined[ (combined$patient_id %in% er_status & combined$patient_id %in% her2) |  combined$patient_id %in% three_gene,]
