@@ -135,13 +135,24 @@ p + geom_line(data = surv, aes(x = times, y = surv, group = sample))
 m1.gam <- gamm4::gamm4(status~1+offset(log_dtime)+s(time),
                  data = long_ic2dat , family='poisson')
 
-m1.stan_gam <- rstanarm::stan_gamm4(status~1+offset(log_dtime)+s(time),
-                                    data = long_ic2dat , family='poisson')
-y_rep <- posterior_predict(m1.stan_gam)
-dim(y_rep)
+#---- The ML approach
+print(m1.gam)
 
+time <- c(sort(unique(long_ic2dat$time)))
+log_dtime <- log( diff(c(0, time) ) )
+new_dat <- data.frame(log_dtime = log_dtime, time = time)
+p1 <- predict(mgcv::gam(status ~ 1 + offset(log_dtime) + s(time), long_ic2dat, family='poisson'), new_dat)
+p1
+S1<-exp(-cumsum(exp(p1)))
 
-#---------- Going tidybayes csetraynor/tidybayes
+p <- plot_km(ic2dat)
+p <- p + geom_line(data = data.frame(times = time,
+                                     surv = S1), aes(x = times, y = surv))
+p
+
+#---------- With bayes csetraynor/tidybayes
+
+#---- The Bayesian model
 
 library(magrittr)
 library(dplyr)
@@ -160,23 +171,11 @@ import::from(LaplacesDemon, invlogit)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
+m1.stan_gam <- rstanarm::stan_gamm4(status~1+offset(log_dtime)+s(time),
+                                    data = long_ic2dat , family='poisson')
+y_rep <- posterior_predict(m1.stan_gam)
+dim(y_rep)
 summary(m1.stan_gam)
-
-#---- The ML approach
-print(m1.gam)
-
-time <- c(sort(unique(long_ic2dat$time)))
-log_dtime <- log( diff(c(0, time) ) )
-new_dat <- data.frame(log_dtime = log_dtime, time = time)
-p1 <- predict(mgcv::gam(status ~ 1 + offset(log_dtime) + s(time), long_ic2dat, family='poisson'), new_dat)
-p1
-S1<-exp(-cumsum(exp(p1)))
-
-p <- plot_km(ic2dat)
-p <- p + geom_line(data = data.frame(times = time,
-                                surv = S1), aes(x = times, y = surv))
-p
-#---- The Bayesian model
 
 parameters(m1.stan_gam)
 post <- as.matrix(m1.stan_gam)
@@ -193,3 +192,32 @@ plot.frame <- long_ic2dat %>%
 
 p <- plot_km(ic2dat)
 p + geom_line(data = plot.frame, aes(x = time, y = surv), linetype = 2)
+
+
+# Calculta Brier Score ----------------
+set.seed(10)
+newdata <- ic2dat[sample(nrow(ic2dat), 15 ), ] %>% arrange(time)
+timepoints <-  seq(0, max(newdata$time),
+                   length.out = 100L)
+longdatanew <- gen_stan_dat(newdata, timepoints = timepoints)
+longdatanew$testml <- predict(m1.stan_gam, newdata = longdatanew)
+test <- longdatanew %>% select(time, testml, sample_id)
+test_matrix <- split(test, as.factor(test$sample_id)) %>%
+  Reduce(function(dtf1,dtf2) full_join(dtf1,dtf2,by="time"), .) %>%
+  select(contains("testml")) %>%
+  as.matrix() %>%
+  exp
+
+cumhaz <- apply( test_matrix, 1,  cumsum )
+
+probs <- exp( - cumhaz )
+
+brier <- pec::pec(probs, Surv(time, status) ~ 1,
+                  data = newdata,
+                  maxtime = max(timepoints),
+                  exact = FALSE,
+                  exactness = nrow(test2) - 1)
+
+#--- Full Bayesian
+post <- posterior_predict(m1.stan_gam, newdata = longdatanew,
+                                      offset = longdatanew$log_dtime)

@@ -197,12 +197,17 @@ net_gene <- function(oncosig, path){
 #' @export
 #' @importFrom magrittr %>%
 #' @importFrom rlang !!
-gen_stan_dat <- function(dat, status = "status", time = "time") {
+gen_stan_dat <- function(dat, status = "status", time = "time", timepoints = T) {
   # prepare for longdat formating
   dat$sample_id <- 1:nrow(dat)  #create sample id
   # get unique times: only event times equivalent to Cox model
-  times <- dat[dat[[status]], ]
-  times <- times[order(unique(unlist(times[, time]))), time]
+  if(length(timepoints) > 1 ){
+    times <- timepoints
+  } else{
+    times <- dat[dat[[status]], ]
+    times <- times[order(unique(unlist(times[, time]))), time]
+  }
+
   form <- as.formula(paste0("Surv(", time, " ,", status, " )", "~."))
   longdat <- survival::survSplit(form, data = dat, cut = times)
   # create time point id
