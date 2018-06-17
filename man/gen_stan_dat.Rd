@@ -4,7 +4,7 @@
 \alias{gen_stan_dat}
 \title{Fit MAP estimates for the Poisson Model PEM.   Important aspects of the modelling #'approach: Dependent variable is the binary event indicator. Adding an intercept is #'recommendable to provide a decent and interpretable reference category for factor #'variables. Use the logarithm of the interval length as an offset.}
 \usage{
-gen_stan_dat(dat, status = "status", time = "time")
+gen_stan_dat(dat, status = "status", time = "time", timepoints = T)
 }
 \arguments{
 \item{d}{a dataset \cr

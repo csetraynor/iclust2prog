@@ -141,7 +141,7 @@ print(m1.gam)
 time <- c(sort(unique(long_ic2dat$time)))
 log_dtime <- log( diff(c(0, time) ) )
 new_dat <- data.frame(log_dtime = log_dtime, time = time)
-p1 <- predict(mgcv::gam(status ~ 1 + offset(log_dtime) + s(time), long_ic2dat, family='poisson'), new_dat)
+p1 <- predict(mgcv::gam(test ~ 1 + offset(log_dtime) + s(time), long_ic2dat, family='poisson'), new_dat)
 p1
 S1<-exp(-cumsum(exp(p1)))
 
@@ -219,5 +219,5 @@ brier <- pec::pec(probs, Surv(time, status) ~ 1,
                   exactness = nrow(test2) - 1)
 
 #--- Full Bayesian
-post <- posterior_predict(m1.stan_gam, newdata = longdatanew,
-                                      offset = longdatanew$log_dtime)
+post <- posterior_predict(m1.stan_gam)
+long_ic2dat$test <- post[1, ]
