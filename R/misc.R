@@ -133,28 +133,28 @@ post_tab <- function(diff_tab, ibrier_tab){
   cbind(ibrier_tab, diff_tab)
 }
 
-get_geneTable <- function(tab){
-  genedata <- data.frame(Hugo_Symbol = tab$Parameter,
-                         coef = tab$HR)
-  if("age_std" %in% genedata$Hugo_Symbol){
-    geneTable <- genedata[(-match(c("age_std", "npi"),genedata$Hugo_Symbol)),]
+get_table <- function(samp, gene = F){
+  dat <- data.frame(Hugo_Symbol = samp$Parameter,
+                         coef = samp$HR)
+  if( ("age_std" %in% dat$Hugo_Symbol) & gene){
+    tab <- dat[(-match(c("age_std", "npi"),dat$Hugo_Symbol)),]
   }else{
-    geneTable <- genedata
+    tab <- dat
   }
-  geneTable
+  tab
 }
 
-get_coeff_Tab <- function(samp){
-  coefficient <- lapply(samp$GeneTab_iclust2, function(x){
+get_coeff <- function(samp, tab){
+  coefficient <- lapply(samp[[tab]], function(x){
     out <- x$coef
   }
   )
   coefficient_tab <- as.data.frame(do.call(rbind, coefficient))
-  colnames(coefficient_tab) <- samp$GeneTab_iclust2 $`1`$Hugo_Symbol
+  colnames(coefficient_tab) <- samp[[tab]]$`1`$Hugo_Symbol
 
   int_coeff <- cbind(samp, coefficient_tab)
   int_coeff <- int_coeff %>%
-    dplyr::select(-dplyr::matches("^mod"), -dplyr::matches("^Cox"),  -dplyr::matches("^GeneTab"))
+    dplyr::select(-dplyr::matches("^mod"), -dplyr::matches("^Cox"),  -dplyr::matches(tab))
   tibble::as.tibble(int_coeff)
 }
 
@@ -181,3 +181,51 @@ net_gene <- function(oncosig, path){
   unique(unlist(kras))
 }
 
+
+
+#' Fit MAP estimates for the Poisson Model PEM.   Important aspects of the modelling #'approach: Dependent variable is the binary event indicator. Adding an intercept is #'recommendable to provide a decent and interpretable reference category for factor #'variables. Use the logarithm of the interval length as an offset.
+#'
+#'
+#' @param
+#' d a dataset \cr
+#' formula  \cr
+#' a log baseline hazard
+#' t_dur duration time for individtual ith in the hth interval
+#' lambda hazard rate
+#' os_event censoring indicator (actual event) for the ith subject in the hth interval
+#' @return a MAP fit
+#' @export
+#' @importFrom magrittr %>%
+#' @importFrom rlang !!
+gen_stan_dat <- function(dat, status = "status", time = "time") {
+  # prepare for longdat formating
+  dat$sample_id <- 1:nrow(dat)  #create sample id
+  # get unique times: only event times equivalent to Cox model
+  times <- dat[dat[[status]], ]
+  times <- times[order(unique(unlist(times[, time]))), time]
+  form <- as.formula(paste0("Surv(", time, " ,", status, " )", "~."))
+  longdat <- survival::survSplit(form, data = dat, cut = times)
+  # create time point id
+  longdat <- longdat %>% dplyr::group_by(sample_id) %>% dplyr::mutate(t_id = seq(n()))
+  # calculate log duration for off-set variable
+  longdat$dtime <- longdat[time] - longdat[["tstart"]]
+  longdat$log_dtime <- as.double( unlist( log(longdat$dtime) ) )
+
+  longdat
+
+  # stan_data <- list(N = nrow(longdata), S =
+  # dplyr::n_distinct(longdata$sample), T = length(times), s =
+  # array(as.numeric(longdata$s)), t = array(longdata$t), event =
+  # array(longdata$deceased), t_obs = array(longdata$os_months), t_dur =
+  # array(longdata$t_dur)) stan_data
+}
+
+plot_km <- function(d, time = "time", status = "status"){
+
+  form <- as.formula(paste0("Surv(", time, " ,", status, " )", "~1"))
+  mle.surv <- survival::survfit(form,
+                                data = d )
+
+  ggplot2::autoplot(mle.surv, conf.int = F) +
+    labs(x = "Time (months)", y = "Survival probability", title= "K-M")
+}
