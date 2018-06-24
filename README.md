@@ -18,7 +18,7 @@ This package is built in R to install R follow R-CRAN.
 In addition, this package performs Bayesian analysis based on the HMC  with Stan.  Installation and documentation of Stan can be found here: http://mc-stan.org/users/documentation/ . We will be using the version for R rstan.
 
 ### Installing
-The package has to be installed in your R library either via git clone . or using devtools for example:
+The R package can be installed either via git clone, see tutorial here (https://bit.ly/2MgUPIu) or by using devtools in Rstudio:
 ```
 if(!require("devtools")) install.packages("devtools")
 devtools::install_github("csetraynor/iclust2prog")

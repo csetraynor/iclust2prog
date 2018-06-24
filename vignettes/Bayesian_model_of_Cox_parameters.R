@@ -138,16 +138,22 @@ m1.gam <- gamm4::gamm4(status~1+offset(log_dtime)+s(time),
 #---- The ML approach
 print(m1.gam)
 
-time <- c(sort(unique(long_ic2dat$time)))
-log_dtime <- log( diff(c(0, time) ) )
+time1 <- long_ic2dat %>% filter(chemotherapy == "YES") %>%
+  dplyr::select(time, patient_id) %>%
+  arrange(time) %>%
+  mutate( log_dtime1 =  log( diff(c(0, time) ) ) )
+
+
 new_dat <- data.frame(log_dtime = log_dtime, time = time)
-p1 <- predict(mgcv::gam(test ~ 1 + offset(log_dtime) + s(time), long_ic2dat, family='poisson'), new_dat)
+ic2dat$log_dtime <- log(ic2dat$time)
+p1 <- predict(mgcv::gam(test ~ 1 + offset(log_dtime) + s(time) + factor(chemotherapy), long_ic2dat, family='poisson'), new_dat)
 p1
 S1<-exp(-cumsum(exp(p1)))
 
-p <- plot_km(ic2dat)
+p <- plot_km(ic2surv, strata = "chemotherapy")
 p <- p + geom_line(data = data.frame(times = time,
-                                     surv = S1), aes(x = times, y = surv))
+                                     surv = S1,
+                                     chemo = ic2surv$chemotherapy), aes(x = times, y = surv, group = chemo))
 p
 
 #---------- With bayes csetraynor/tidybayes
@@ -171,8 +177,7 @@ import::from(LaplacesDemon, invlogit)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
-m1.stan_gam <- rstanarm::stan_gamm4(status~1+offset(log_dtime)+s(time),
-                                    data = long_ic2dat , family='poisson')
+m1.stan_gam <- rstanarm::stan_gamm4(status~1+offset(log_dtime)+s(time)+factor(chemotherapy), data = long_ic2dat , family='poisson')
 y_rep <- posterior_predict(m1.stan_gam)
 dim(y_rep)
 summary(m1.stan_gam)
